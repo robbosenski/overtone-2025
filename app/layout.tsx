@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const electricBlue = localFont({
@@ -62,6 +63,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${electricBlue.variable} ${helveticaCond.variable} antialiased`}>
         {children}
+        <Analytics />
       </body>
     </html>
   );
