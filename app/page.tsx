@@ -73,7 +73,7 @@ export default function Page() {
         {
           q: 'How do I get tickets?',
           a: (<>
-            Sign up for Early Access tickets <a href="https://overtone.fillout.com/earlyaccess" target="_blank" rel="noopener noreferrer" className="underline">here</a>. Early Access guarantees you a 1st Release priced ticket when tickets go live on Tuesday 19 August at 12PM. You'll get a link shortly before that if you signed up. Email or DM us if you don't receive the link.
+            Sign up for Early Access tickets <a href="https://overtone.fillout.com/earlyaccess" target="_blank" rel="noopener noreferrer" className="underline">here</a>. Early Access guarantees you a 1st Release priced ticket when tickets go live on Tuesday 19 August at 12PM. You&apos;ll get a link shortly before that if you signed up. Email or DM us if you don&apos;t receive the link.
           </>)
         },
         {
@@ -93,7 +93,7 @@ export default function Page() {
             General Access live Wednesday 20 August 12pm
             <br />
             <br />
-            Sign up <a href="https://overtone.fillout.com/earlyaccess" target="_blank" rel="noopener noreferrer">here</a> to be sent an exclusive link for 1st Release tickets. You'll be sent a link on Tuesday 19 August before tickets are live at 12PM.
+            Sign up <a href="https://overtone.fillout.com/earlyaccess" target="_blank" rel="noopener noreferrer">here</a> to be sent an exclusive link for 1st Release tickets. You&apos;ll be sent a link on Tuesday 19 August before tickets are live at 12PM.
           </>)
         },
         { q: 'What is the age requirement?', a: 'The festival is strictly 18+. You must present a valid, government‑issued photo ID on entry—digital copies or photos of ID are not accepted.' },
