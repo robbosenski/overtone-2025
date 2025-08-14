@@ -309,28 +309,48 @@ export default function Page() {
                 key={item.name}
                 className={`group text-3xl md:text-6xl tracking-tight text-black ${item.name === '1TBSP' ? 'mt-10' : ''}`}
               >
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={openArtist === item.name}
-                  onClick={() => setOpenArtist(openArtist === item.name ? null : item.name)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenArtist(openArtist === item.name ? null : item.name); } }}
-                  className="flex items-baseline justify-between gap-6 cursor-pointer select-none"
-                >
-                  <span className="flex-1">
-                    {Array.from(item.name).map((ch, i) => (
-                      <span
-                        key={i}
-                        className="inline-block transition-all duration-200 ease-out group-hover:[transition-duration:260ms] group-hover:font-[600] group-hover:scale-[1.04]"
-                      >
-                        {ch === ' ' ? '\u00A0' : ch}
-                      </span>
-                    ))}
-                  </span>
-                  <span className="text-3xl md:text-6xl tracking-tight min-w-[4rem] text-right font-light no-stroke" style={{ fontFamily: 'var(--font-header)', fontWeight: 300 }}>
-                    {item.code}
-                  </span>
-                </div>
+                {/* Show clickable version if artist has audio preview */}
+                {(item.spotify || item.soundcloud) ? (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={openArtist === item.name}
+                    onClick={() => setOpenArtist(openArtist === item.name ? null : item.name)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenArtist(openArtist === item.name ? null : item.name); } }}
+                    className="flex items-baseline justify-between gap-6 cursor-pointer select-none"
+                  >
+                    <span className="flex-1">
+                      {Array.from(item.name).map((ch, i) => (
+                        <span
+                          key={i}
+                          className="inline-block transition-all duration-200 ease-out group-hover:[transition-duration:260ms] group-hover:font-[600] group-hover:scale-[1.04]"
+                        >
+                          {ch === ' ' ? '\u00A0' : ch}
+                        </span>
+                      ))}
+                    </span>
+                    <span className="text-3xl md:text-6xl tracking-tight min-w-[4rem] text-right font-light no-stroke" style={{ fontFamily: 'var(--font-header)', fontWeight: 300 }}>
+                      {item.code}
+                    </span>
+                  </div>
+                ) : (
+                  /* Show non-clickable version if no audio preview */
+                  <div className="flex items-baseline justify-between gap-6">
+                    <span className="flex-1">
+                      {Array.from(item.name).map((ch, i) => (
+                        <span
+                          key={i}
+                          className="inline-block"
+                        >
+                          {ch === ' ' ? '\u00A0' : ch}
+                        </span>
+                      ))}
+                    </span>
+                    <span className="text-3xl md:text-6xl tracking-tight min-w-[4rem] text-right font-light no-stroke" style={{ fontFamily: 'var(--font-header)', fontWeight: 300 }}>
+                      {item.code}
+                    </span>
+                  </div>
+                )}
                 {openArtist === item.name && (
                   <div className="mt-4 max-w-5xl animate-fade-in leading-none">
                     {item.spotify && (
