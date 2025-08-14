@@ -27,6 +27,24 @@ export default function Page() {
   const [heroHeight, setHeroHeight] = useState(0);
   const [openArtist, setOpenArtist] = useState<string | null>(null);
   const [muted, setMuted] = useState(true);
+  const [loadedPlayers, setLoadedPlayers] = useState<Set<string>>(new Set());
+
+  // Helper function to toggle artist and clear loading state when closing
+  const toggleArtist = (artistName: string) => {
+    if (openArtist === artistName) {
+      // Closing - clear the loading state for this artist
+      setLoadedPlayers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`spotify-${artistName}`);
+        newSet.delete(`soundcloud-${artistName}`);
+        return newSet;
+      });
+      setOpenArtist(null);
+    } else {
+      // Opening
+      setOpenArtist(artistName);
+    }
+  };
 
   // About section slideshow images (optimized versions)
   const aboutImages = [
@@ -179,15 +197,28 @@ export default function Page() {
             <div className="flex items-center space-x-4">
               <Link href="/">
                 <div className="h-6 flex items-center relative">
-                  {/* Mobile: Use compact logo */}
-                  <Image
-                    src="/logo.svg"
-                    alt="Overtone Festival"
-                    width={72}
-                    height={24}
-                    className="h-6 w-auto relative -top-0.5 sm:hidden"
-                    priority
-                  />
+                  {/* Mobile: Use compact logo with color transitions */}
+                  <div className="sm:hidden relative">
+                    {/* Acid logo (pre-hero) */}
+                    <Image
+                      src="/logo.svg"
+                      alt="Overtone Festival"
+                      width={72}
+                      height={24}
+                      className={`h-6 w-auto relative -top-0.5 transition-opacity duration-300 ${pastHero ? 'opacity-0' : 'opacity-100'}`}
+                      priority
+                    />
+                    {/* Black logo (post-hero) */}
+                    <Image
+                      src="/logo.svg"
+                      alt="Overtone Festival"
+                      width={72}
+                      height={24}
+                      className={`h-6 w-auto absolute inset-0 -top-0.5 transition-opacity duration-300 ${pastHero ? 'opacity-100' : 'opacity-0'} filter brightness-0 saturate-100`}
+                      aria-hidden={!pastHero}
+                      priority
+                    />
+                  </div>
                   {/* Desktop: Use wordmark with color transitions */}
                   <div className="hidden sm:block relative">
                     {/* Acid wordmark (pre-hero) */}
@@ -315,8 +346,8 @@ export default function Page() {
                     role="button"
                     tabIndex={0}
                     aria-expanded={openArtist === item.name}
-                    onClick={() => setOpenArtist(openArtist === item.name ? null : item.name)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenArtist(openArtist === item.name ? null : item.name); } }}
+                    onClick={() => toggleArtist(item.name)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleArtist(item.name); } }}
                     className="flex items-baseline justify-between gap-6 cursor-pointer select-none"
                   >
                     <span className="flex-1">
@@ -368,12 +399,15 @@ export default function Page() {
                             style={{ backgroundColor: 'transparent' }}
                             onLoad={(e) => {
                               (e.target as HTMLIFrameElement).style.opacity = '1';
+                              setLoadedPlayers(prev => new Set(prev).add(`spotify-${item.name}`));
                             }}
                           />
                           {/* Loading placeholder */}
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/5 text-black/60 text-sm font-medium pointer-events-none">
-                            Loading player...
-                          </div>
+                          {!loadedPlayers.has(`spotify-${item.name}`) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/5 text-black/60 text-sm font-medium pointer-events-none" style={{ wordSpacing: 'normal' }}>
+                              Loading player...
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -390,12 +424,15 @@ export default function Page() {
                             className="absolute inset-0 w-full h-full opacity-0 transition-opacity duration-500"
                             onLoad={(e) => {
                               (e.target as HTMLIFrameElement).style.opacity = '1';
+                              setLoadedPlayers(prev => new Set(prev).add(`soundcloud-${item.name}`));
                             }}
                           />
                           {/* Loading placeholder */}
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/5 text-black/60 text-sm font-medium pointer-events-none">
-                            Loading player...
-                          </div>
+                          {!loadedPlayers.has(`soundcloud-${item.name}`) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/5 text-black/60 text-sm font-medium pointer-events-none" style={{ wordSpacing: 'normal' }}>
+                              Loading player...
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
