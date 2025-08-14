@@ -179,37 +179,49 @@ export default function Page() {
             <div className="flex items-center space-x-4">
               <Link href="/">
                 <div className="h-6 flex items-center relative">
-                  {/* Acid wordmark (pre-hero) */}
+                  {/* Mobile: Use compact logo */}
                   <Image
-                    src="/logo-wordmark.svg"
+                    src="/logo.svg"
                     alt="Overtone Festival"
-                    width={160}
+                    width={72}
                     height={24}
-                    className={`h-6 w-auto relative -top-0.5 transition-opacity duration-300 ${pastHero ? 'opacity-0' : 'opacity-100'}`}
+                    className="h-6 w-auto relative -top-0.5 sm:hidden"
                     priority
                   />
-                  {/* Black wordmark (post-hero) using filter to force black */}
-                  <Image
-                    src="/logo-wordmark.svg"
-                    alt="Overtone Festival (Black)"
-                    width={160}
-                    height={24}
-                    className={`h-6 w-auto absolute inset-0 -top-0.5 transition-opacity duration-300 ${pastHero ? 'opacity-100' : 'opacity-0'} filter brightness-0 saturate-100`}
-                    aria-hidden={!pastHero}
-                  />
+                  {/* Desktop: Use wordmark with color transitions */}
+                  <div className="hidden sm:block relative">
+                    {/* Acid wordmark (pre-hero) */}
+                    <Image
+                      src="/logo-wordmark.svg"
+                      alt="Overtone Festival"
+                      width={160}
+                      height={24}
+                      className={`h-6 w-auto relative -top-0.5 transition-opacity duration-300 ${pastHero ? 'opacity-0' : 'opacity-100'}`}
+                      priority
+                    />
+                    {/* Black wordmark (post-hero) using filter to force black */}
+                    <Image
+                      src="/logo-wordmark.svg"
+                      alt="Overtone Festival (Black)"
+                      width={160}
+                      height={24}
+                      className={`h-6 w-auto absolute inset-0 -top-0.5 transition-opacity duration-300 ${pastHero ? 'opacity-100' : 'opacity-0'} filter brightness-0 saturate-100`}
+                      aria-hidden={!pastHero}
+                    />
+                  </div>
                 </div>
               </Link>
-              <a href="#about" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>About</a>
-              <a href="#lineup" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>Lineup</a>
-              <a href="#faqs" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>FAQs</a>
-              <a href="#contact" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>Contact</a>
+              <a href="#about" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>About</a>
+              <a href="#lineup" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>Lineup</a>
+              <a href="#faqs" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>FAQs</a>
+              <a href="#contact" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>Contact</a>
             </div>
             <div className="flex items-center space-x-4">
               <a
                 href="https://overtone.fillout.com/earlyaccess"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`tickets-btn px-5 py-2 text-[1.15rem] font-semibold rounded-lg hover:opacity-90 transition-colors no-stroke inline-flex items-center leading-none ${pastHero ? 'bg-black !text-[var(--acid)]' : 'bg-[var(--acid)] !text-[var(--bg)]'}`}
+                className={`tickets-btn px-3 sm:px-5 py-2 text-[0.92rem] sm:text-[1.15rem] font-semibold rounded-lg hover:opacity-90 transition-colors no-stroke inline-flex items-center leading-none ${pastHero ? 'bg-black !text-[var(--acid)]' : 'bg-[var(--acid)] !text-[var(--bg)]'}`}
               >
                 Tickets
               </a>
