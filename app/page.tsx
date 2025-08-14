@@ -279,7 +279,7 @@ export default function Page() {
               Set across two outdoor stages, it brings together some of the best international and Australian electronic artists for a full day of music, dancing, and good vibes.
             </p>
             <p className="text-[2.25rem] sm:text-[2.75rem] md:text-[3.0rem] leading-[1.08] text-black font-light tracking-tight">
-              Expect high-quality sound, creative stage design, and a vibrant atmosphere surrounded by the park’s greenery. Whether you’re a local or visiting for the weekend, Overtone is your chance to experience world-class music in the heart of the Gold Coast.
+              Expect high-quality sound, creative stage design, and a vibrant atmosphere surrounded by the park’s greenery.
             </p>
           </div>
           <div className="relative w-full border border-black/20 bg-black/5 h-[50vh] md:h-auto" style={{ height: typeof window !== 'undefined' && window.innerWidth > 768 ? (aboutTextHeight || undefined) : undefined }}>
