@@ -334,30 +334,50 @@ export default function Page() {
                 {openArtist === item.name && (
                   <div className="mt-4 max-w-5xl animate-fade-in leading-none">
                     {item.spotify && (
-                      <div className="overflow-hidden rounded-xl shadow-md border border-black/10">
-                        <iframe
-                          data-testid="embed-iframe"
-                          src={`${item.spotify}?utm_source=generator&theme=0`}
-                          width="100%"
-                          height="152"
-                          frameBorder="0"
-                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                          loading="lazy"
-                          className="block"
-                          style={{ backgroundColor: 'transparent' }}
-                        />
+                      <div className="overflow-hidden rounded-xl shadow-md border border-black/10 bg-black/5">
+                        <div className="relative w-full h-[152px]">
+                          <iframe
+                            data-testid="embed-iframe"
+                            src={`${item.spotify}?utm_source=generator&theme=0`}
+                            width="100%"
+                            height="152"
+                            frameBorder="0"
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                            loading="lazy"
+                            className="absolute inset-0 w-full h-full opacity-0 transition-opacity duration-500"
+                            style={{ backgroundColor: 'transparent' }}
+                            onLoad={(e) => {
+                              (e.target as HTMLIFrameElement).style.opacity = '1';
+                            }}
+                          />
+                          {/* Loading placeholder */}
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/5 text-black/60 text-sm font-medium pointer-events-none">
+                            Loading player...
+                          </div>
+                        </div>
                       </div>
                     )}
                     {!item.spotify && item.soundcloud && (
-                      <iframe
-                        width="100%"
-                        height="166"
-                        scrolling="no"
-                        frameBorder="no"
-                        allow="autoplay"
-                        src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(item.soundcloud)}&color=%23000000&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`}
-                        className="block rounded-lg shadow-md border border-black/10"
-                      />
+                      <div className="overflow-hidden rounded-xl shadow-md border border-black/10 bg-black/5">
+                        <div className="relative w-full h-[166px]">
+                          <iframe
+                            width="100%"
+                            height="166"
+                            scrolling="no"
+                            frameBorder="no"
+                            allow="autoplay"
+                            src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(item.soundcloud)}&color=%23000000&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`}
+                            className="absolute inset-0 w-full h-full opacity-0 transition-opacity duration-500"
+                            onLoad={(e) => {
+                              (e.target as HTMLIFrameElement).style.opacity = '1';
+                            }}
+                          />
+                          {/* Loading placeholder */}
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/5 text-black/60 text-sm font-medium pointer-events-none">
+                            Loading player...
+                          </div>
+                        </div>
+                      </div>
                     )}
                     {!item.spotify && !item.soundcloud && (
                       <div className="text-sm md:text-base italic text-black/70">No preview available.</div>
