@@ -260,7 +260,7 @@ export default function Page() {
           onClick={() => {
             const v = videoRef.current; if (!v) return; v.muted = !v.muted; setMuted(v.muted);
           }}
-          className="absolute bottom-4 right-4 z-20 bg-black/60 text-[var(--acid)] border border-white/20 backdrop-blur-sm rounded-full px-4 py-2 text-sm font-medium hover:bg-black/70 transition"
+          className="absolute bottom-16 sm:bottom-4 right-4 z-20 bg-black/60 text-[var(--acid)] border border-white/20 backdrop-blur-sm rounded-full px-4 py-2 text-sm font-medium hover:bg-black/70 transition"
           aria-label={muted ? 'Unmute hero video' : 'Mute hero video'}
         >
           {muted ? 'Audio Off' : 'Audio On'}
@@ -282,7 +282,7 @@ export default function Page() {
               Expect high-quality sound, creative stage design, and a vibrant atmosphere surrounded by the park’s greenery. Whether you’re a local or visiting for the weekend, Overtone is your chance to experience world-class music in the heart of the Gold Coast.
             </p>
           </div>
-          <div className="relative w-full border border-black/20 bg-black/5" style={{ height: aboutTextHeight || undefined }}>
+          <div className="relative w-full border border-black/20 bg-black/5 h-[50vh] md:h-auto" style={{ height: typeof window !== 'undefined' && window.innerWidth > 768 ? (aboutTextHeight || undefined) : undefined }}>
             <Image
               key={aboutImages[aboutIndex]}
               src={aboutImages[aboutIndex]}
