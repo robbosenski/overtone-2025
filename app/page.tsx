@@ -28,17 +28,17 @@ export default function Page() {
   const [openArtist, setOpenArtist] = useState<string | null>(null);
   const [muted, setMuted] = useState(true);
 
-  // About section slideshow images
+  // About section slideshow images (optimized versions)
   const aboutImages = [
-    '/about/260813_OVERTONE_VENUE_STILL_001.png',
-    '/about/260813_OVERTONE_VENUE_STILL_002.png',
-    '/about/260813_OVERTONE_VENUE_STILL_003.png',
-    '/about/260813_OVERTONE_VENUE_STILL_004.png',
-    '/about/260813_OVERTONE_VENUE_STILL_006.png',
-    '/about/260813_OVERTONE_VENUE_STILL_007.png',
-    '/about/260813_OVERTONE_VENUE_STILL_008.png',
-    '/about/260813_OVERTONE_VENUE_STILL_009.png',
-    '/about/260813_OVERTONE_VENUE_STILL_010.png'
+    '/about/optimized/260813_OVERTONE_VENUE_STILL_001.jpg',
+    '/about/optimized/260813_OVERTONE_VENUE_STILL_002.jpg',
+    '/about/optimized/260813_OVERTONE_VENUE_STILL_003.jpg',
+    '/about/optimized/260813_OVERTONE_VENUE_STILL_004.jpg',
+    '/about/optimized/260813_OVERTONE_VENUE_STILL_006.jpg',
+    '/about/optimized/260813_OVERTONE_VENUE_STILL_007.jpg',
+    '/about/optimized/260813_OVERTONE_VENUE_STILL_008.jpg',
+    '/about/optimized/260813_OVERTONE_VENUE_STILL_009.jpg',
+    '/about/optimized/260813_OVERTONE_VENUE_STILL_010.jpg'
   ];
   const [aboutIndex, setAboutIndex] = useState(0);
   const aboutParaRef = useRef<HTMLParagraphElement | null>(null);
@@ -274,11 +274,14 @@ export default function Page() {
             <Image
               key={aboutImages[aboutIndex]}
               src={aboutImages[aboutIndex]}
-              alt="Overtone Festival still"
+              alt="Overtone Festival venue"
               fill
               sizes="(max-width:768px) 100vw, 50vw"
               className="object-cover"
-              priority
+              quality={75}
+              priority={aboutIndex === 0}
+              placeholder="blur"
+              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
             />
           </div>
         </div>
