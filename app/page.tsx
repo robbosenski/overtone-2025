@@ -477,7 +477,7 @@ export default function Page() {
       if (!canvas || !container) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      let dpr = Math.min(3, window.devicePixelRatio || 1);
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
       const resize = () => {
         const w = container.clientWidth;
         const h = container.clientHeight;
