@@ -300,9 +300,9 @@ export default function Page() {
 
       {/* About Section */}
       <section id="about" className="py-16 px-4">
-        <div className="w-full grid md:grid-cols-2 md:grid-rows-[auto_auto] gap-10">
+        <div className="w-full grid md:grid-cols-2 md:grid-rows-[auto_auto] gap-10 md:gap-8 lg:gap-12 xl:gap-16">
           <h2 className="text-6xl font-bold text-black md:col-span-2">About</h2>
-          <div ref={aboutParaRef} className="max-w-3xl space-y-8">
+          <div ref={aboutParaRef} className="max-w-3xl md:max-w-none md:pr-2 lg:pr-4 xl:pr-6 space-y-8">
             <p className="text-[2.25rem] sm:text-[2.75rem] md:text-[3.0rem] leading-[1.08] text-black font-light tracking-tight">
               Overtone Festival is a new open-air music festival coming to Musgrave Park on the Gold Coast.
             </p>
@@ -313,7 +313,7 @@ export default function Page() {
               Expect high-quality sound, creative stage design, and a vibrant atmosphere surrounded by the park’s greenery.
             </p>
           </div>
-          <div className="relative w-full border border-black/20 bg-black/5 h-[50vh] md:h-auto" style={{ height: typeof window !== 'undefined' && window.innerWidth > 768 ? (aboutTextHeight || undefined) : undefined }}>
+          <div className="relative w-full border border-black/20 bg-black/5 h-[60vh] md:h-auto md:min-h-full" style={{ height: typeof window !== 'undefined' && window.innerWidth >= 768 ? (aboutTextHeight || undefined) : undefined }}>
             <Image
               key={aboutImages[aboutIndex]}
               src={aboutImages[aboutIndex]}
