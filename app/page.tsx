@@ -96,8 +96,11 @@ export default function Page() {
       if (heroEl) {
         const r = heroEl.getBoundingClientRect();
         inHero = mx >= r.left && mx <= r.right && my >= r.top && my <= r.bottom;
-        // Also suppress while top of page (before scrolling past hero) to avoid background motion behind logo/video
-        if (window.scrollY < r.height - 40) inHero = true;
+        // Previously suppressed until nearly entire hero scrolled past. We now allow animation
+        // once the user has begun to scroll (revealing content below hero). Retain a tiny
+        // threshold to avoid initial load flashes.
+        const MIN_SCROLL_TO_ENABLE = 8; // px
+        if (window.scrollY < MIN_SCROLL_TO_ENABLE) inHero = true;
       }
 
       if (inHero) { requestAnimationFrame(loop); return; }
