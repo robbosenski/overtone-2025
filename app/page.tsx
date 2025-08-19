@@ -38,13 +38,16 @@ export default function Page() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+  // Use higher DPR for crisper lines but cap to avoid perf issues
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  const hairline = 1 / dpr; // consistent hairline thickness
     let width = window.innerWidth, height = window.innerHeight;
     const resize = () => {
       width = window.innerWidth; height = window.innerHeight;
       canvas.width = width * dpr; canvas.height = height * dpr;
       canvas.style.width = width + 'px'; canvas.style.height = height + 'px';
-      ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.imageSmoothingEnabled = false;
     };
     resize();
     window.addEventListener('resize', resize);
@@ -210,8 +213,12 @@ export default function Page() {
         const cx = left + w/2, cy = top + h/2;
         const pad = t.letter ? 1 : 3;
         const alpha = (t.letter ? 0.35 : 0.45) * a;
-        ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
-        ctx.strokeRect(left-pad, top-pad, w+pad*2, h+pad*2);
+  ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
+  // Pixel snap for sharper hairline rectangles
+  const snap = (v:number)=>Math.round(v*dpr)/dpr; // pure snap; separate half-pixel if dpr==1
+  ctx.lineWidth = hairline;
+  const ox = (dpr === 1 ? 0.5 : 0); // half-pixel alignment only for non-retina
+  ctx.strokeRect(snap(left-pad)+ox, snap(top-pad)+ox, Math.round((w+pad*2)*dpr)/dpr, Math.round((h+pad*2)*dpr)/dpr);
         if (a > 0.6 && linesDrawn < maxLines) {
           const dx = cx - mx, dy = cy - my; const dist = Math.hypot(dx,dy) || 1;
           const normX = dx / dist, normY = dy / dist;
@@ -249,7 +256,9 @@ export default function Page() {
         if (i % 3 === 0) {
           ctx.save(); ctx.translate(p.x,p.y); ctx.rotate((p.vx+p.vy)*0.02);
           ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-          ctx.strokeRect(-p.size, -p.size*0.6, p.size*2, p.size*1.2);
+          ctx.lineWidth = hairline * 1.2;
+          const oxp = dpr === 1 ? 0.5 : 0;
+          ctx.strokeRect(Math.round(-p.size)+oxp, Math.round(-p.size*0.6)+oxp, Math.round(p.size*2), Math.round(p.size*1.2));
           ctx.restore();
         } else {
           ctx.beginPath(); ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.arc(p.x,p.y,p.size*0.35,0,Math.PI*2); ctx.fill();
