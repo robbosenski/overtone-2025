@@ -28,6 +28,243 @@ export default function Page() {
   const [openArtist, setOpenArtist] = useState<string | null>(null);
   const [muted, setMuted] = useState(true);
   const [loadedPlayers, setLoadedPlayers] = useState<Set<string>>(new Set());
+  // Mouse tracing canvas
+  const traceCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Procedural mouse tracing network effect
+  useEffect(() => {
+    const canvas = traceCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    let width = window.innerWidth, height = window.innerHeight;
+    const resize = () => {
+      width = window.innerWidth; height = window.innerHeight;
+      canvas.width = width * dpr; canvas.height = height * dpr;
+      canvas.style.width = width + 'px'; canvas.style.height = height + 'px';
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Collect traceable elements (blocks + individual letters)
+    let targets: { el: Element; rect: DOMRect; letter: boolean }[] = [];
+    const collect = () => {
+      targets = Array.from(document.querySelectorAll('[data-trace],[data-trace-letter]')).map(el => ({
+        el,
+        rect: el.getBoundingClientRect(),
+        letter: (el as HTMLElement).hasAttribute('data-trace-letter')
+      }));
+    };
+    collect();
+    const refreshRects = () => {
+      for (const t of targets) t.rect = t.el.getBoundingClientRect();
+    };
+    window.addEventListener('scroll', () => requestAnimationFrame(refreshRects), { passive: true });
+
+  // Particles
+    interface P { x:number; y:number; vx:number; vy:number; life:number; size:number; }
+    const particles: P[] = Array.from({ length: 46 }).map(() => ({
+      x: Math.random()*width,
+      y: Math.random()*height,
+      vx: 0, vy: 0,
+      life: 0.6 + Math.random()*0.9,
+      size: 2 + Math.random()*2.2
+    }));
+
+    // Mouse state
+    let mx = width/2, my = height/2, active = false;
+    const move = (e: PointerEvent) => { mx = e.clientX; my = e.clientY; active = true; };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerleave', () => { active = false; });
+
+    let last = performance.now();
+  // Random activation state map (letter targets flicker organically)
+  const activation = new Map<Element, number>();
+  const loop = (now: number) => {
+      const dt = Math.min(60, now - last)/1000; last = now;
+      ctx.clearRect(0,0,width,height);
+
+      // Hero exclusion: no effect when cursor within hero video region or page top scrolled less than hero height
+      const heroEl = heroRef.current;
+      let inHero = false;
+      if (heroEl) {
+        const r = heroEl.getBoundingClientRect();
+        inHero = mx >= r.left && mx <= r.right && my >= r.top && my <= r.bottom;
+        // Also suppress while top of page (before scrolling past hero) to avoid background motion behind logo/video
+        if (window.scrollY < r.height - 40) inHero = true;
+      }
+
+      if (inHero) { requestAnimationFrame(loop); return; }
+
+  // Vertical scanlines subtle
+      ctx.save();
+      ctx.globalAlpha = 0.05;
+      ctx.fillStyle = '#000';
+      for (let x=0; x<width; x+=4) ctx.fillRect(x,0,1,height);
+      ctx.restore();
+
+      // Particle physics
+  // Skip particle simulation & drawing if cursor not near any target (nearestDist gating computed later)
+  particles.forEach(p => {
+        p.life -= dt*0.15;
+        if (p.life <= 0) {
+          p.x = active ? mx + (Math.random()*120-60) : Math.random()*width;
+          p.y = active ? my + (Math.random()*120-60) : Math.random()*height;
+          p.vx = p.vy = 0;
+          p.life = 0.6 + Math.random()*0.9;
+          p.size = 2 + Math.random()*2.2;
+        }
+        if (active) {
+          const dx = mx - p.x, dy = my - p.y; const dist = Math.hypot(dx,dy) || 1;
+          const f = Math.min(180, 260/dist);
+          p.vx += (dx/dist)*f*dt*0.65;
+          p.vy += (dy/dist)*f*dt*0.65;
+        }
+        // Nearby target attraction
+        let closest: DOMRect | null = null; let closestD = Infinity;
+        for (const t of targets) {
+          const cx = t.rect.left + t.rect.width/2;
+            const cy = t.rect.top + t.rect.height/2;
+            const dx = cx - p.x, dy = cy - p.y; const d = dx*dx+dy*dy;
+            if (d < 150*150 && d < closestD) { closestD = d; closest = t.rect; }
+        }
+        if (closest) {
+          const cx = closest.left + closest.width/2;
+          const cy = closest.top + closest.height/2;
+          const dx = cx - p.x, dy = cy - p.y; const dist = Math.hypot(dx,dy)||1;
+          p.vx += (dx/dist)*30*dt;
+          p.vy += (dy/dist)*30*dt;
+        }
+        p.vx *= 0.9; p.vy *= 0.9;
+        p.x += p.vx*dt*60; p.y += p.vy*dt*60;
+        if (p.x < -40) p.x = width+40; else if (p.x > width+40) p.x = -40;
+        if (p.y < -40) p.y = height+40; else if (p.y > height+40) p.y = -40;
+      });
+
+  // Particle network connections are disabled when not near text (gated later)
+
+      // Hook lines & outlines (random evolving selection of nearby letters)
+      ctx.font = '10px var(--font-body)';
+      const nowActive: Element[] = [];
+      // Determine nearest target distance for gating
+      let nearestDist = Infinity;
+      for (const t of targets) {
+        const r = t.rect; const cx = r.left + r.width/2, cy = r.top + r.height/2;
+        const dx = cx - mx, dy = cy - my; const d = Math.hypot(dx,dy);
+        if (d < nearestDist) nearestDist = d;
+      }
+      const interactionRadius = 260; // only activate inside this
+      const maxSimulLetters = 90; // safety cap
+  const decay = dt * 0.25; // slower fade so items linger
+      // Pre-pass: compute / attempt activation
+      for (const t of targets) {
+  const { left, top, width: w, height: h } = t.rect;
+        const cx = left + w/2, cy = top + h/2;
+        const dx = cx - mx, dy = cy - my; const dist = Math.hypot(dx,dy);
+        const outer = t.letter ? 135 : 280; // slightly generous radius
+  if (dist < outer && nearestDist < interactionRadius) {
+          const falloff = 1 - dist/outer; // 0..1
+          // Base probability higher for block targets so they pulse occasionally
+            const baseP = t.letter ? 0.012 : 0.025; // drastically reduced spawn probability
+          const current = activation.get(t.el) || 0;
+          if (Math.random() < baseP * falloff * dt * 60) { // still frame-rate normalized
+            const boost = t.letter ? 1 : 0.9; // full intensity for letters
+            activation.set(t.el, Math.min(1, current + boost));
+          } else if (current > 0) {
+            activation.set(t.el, current - decay);
+          }
+        } else {
+          const current = activation.get(t.el) || 0;
+          if (current > 0) activation.set(t.el, current - decay*1.1);
+        }
+        const a = activation.get(t.el);
+        if (a && a > 0) nowActive.push(t.el);
+      }
+      // Cleanup fully faded
+      for (const [el, a] of activation.entries()) if (a <= 0) activation.delete(el);
+      // Limit active pool randomly if over cap
+      if (nowActive.length > maxSimulLetters) {
+        for (let i = nowActive.length - 1; i >= maxSimulLetters; i--) {
+          const idx = Math.floor(Math.random()*nowActive.length);
+          const el = nowActive[idx];
+          activation.set(el, (activation.get(el) || 0) * 0.85); // soften
+          nowActive.splice(idx,1);
+        }
+      }
+      // If cursor far from all targets, skip drawing overlays entirely
+      if (nearestDist >= interactionRadius) {
+        // Do not render particles or lines when cursor is far from all targets
+        requestAnimationFrame(loop); return;
+      }
+      // Draw pass
+      let linesDrawn = 0; const maxLines = 6; // fewer simultaneous lines for calmer motion
+      const slowT = now * 0.00025; // slow temporal factor
+      let targetIdx = 0;
+      for (const t of targets) {
+        const a = activation.get(t.el);
+        if (!a || a <= 0) continue;
+        const { left, top, width: w, height: h } = t.rect;
+        const cx = left + w/2, cy = top + h/2;
+        const pad = t.letter ? 1 : 3;
+        const alpha = (t.letter ? 0.35 : 0.45) * a;
+        ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
+        ctx.strokeRect(left-pad, top-pad, w+pad*2, h+pad*2);
+        if (a > 0.6 && linesDrawn < maxLines) {
+          const dx = cx - mx, dy = cy - my; const dist = Math.hypot(dx,dy) || 1;
+          const normX = dx / dist, normY = dy / dist;
+          const px = -normY, py = normX; // perpendicular
+          // Deterministic phase per target for stable, slow drifting curves
+          const phase = targetIdx * 3.137 + (t.letter ? 0 : 1.23);
+          const wobbleFactor = 0.35 + 0.25 * Math.sin(slowT + phase);
+          const baseWobble = Math.min(140, dist * 0.45);
+          const wobble = baseWobble * wobbleFactor;
+          const bendSign = Math.sin(slowT * 0.6 + phase) >= 0 ? 1 : -1;
+          const midX = mx + dx*0.55 + px * wobble * bendSign;
+          const midY = my + dy*0.55 + py * wobble * bendSign;
+          ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          const g = ctx.createLinearGradient(mx,my,cx,cy);
+          g.addColorStop(0, `rgba(0,0,0,0)`);
+          g.addColorStop(0.2, `rgba(0,0,0,${alpha*0.5})`);
+          g.addColorStop(0.8, `rgba(0,0,0,${alpha*0.5})`);
+          g.addColorStop(1, `rgba(0,0,0,0)`);
+          ctx.strokeStyle = g;
+          ctx.beginPath();
+          ctx.moveTo(mx,my);
+          ctx.quadraticCurveTo(midX, midY, cx, cy);
+          ctx.stroke();
+          linesDrawn++;
+          if (!t.letter) {
+            ctx.fillStyle = `rgba(0,0,0,${0.5*alpha})`;
+            ctx.fillText(((cx/innerWidth)*100).toFixed(1)+','+((cy/innerHeight)*100).toFixed(1), left-2, top-6);
+          }
+        }
+        targetIdx++;
+      }
+
+      // Particles (alternate between boxes & dots) only when within interaction radius
+      particles.forEach((p,i) => {
+        if (i % 3 === 0) {
+          ctx.save(); ctx.translate(p.x,p.y); ctx.rotate((p.vx+p.vy)*0.02);
+          ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+          ctx.strokeRect(-p.size, -p.size*0.6, p.size*2, p.size*1.2);
+          ctx.restore();
+        } else {
+          ctx.beginPath(); ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.arc(p.x,p.y,p.size*0.35,0,Math.PI*2); ctx.fill();
+        }
+      });
+
+      requestAnimationFrame(loop);
+    };
+    const id = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('pointermove', move);
+    };
+  }, []);
 
   // Helper function to toggle artist and clear loading state when closing
   const toggleArtist = (artistName: string) => {
@@ -67,6 +304,15 @@ export default function Page() {
     }, 650); // faster (~3x)
     return () => clearInterval(id);
   }, [aboutImages.length]);
+
+  // Helper to output per-letter traceable spans
+  const TraceLetters = ({ text, className }: { text: string; className?: string }) => (
+    <span className={className}>
+      {Array.from(text).map((ch, i) => (
+        <span key={i} data-trace-letter className="inline-block">{ch === ' ' ? '\u00A0' : ch}</span>
+      ))}
+    </span>
+  );
 
   useEffect(() => {
     const measure = () => {
@@ -188,6 +434,8 @@ export default function Page() {
 
   return (
     <>
+  {/* Mouse tracing overlay */}
+  <canvas ref={traceCanvasRef} className="fixed inset-0 pointer-events-none z-30 mix-blend-multiply" aria-hidden="true" />
       {/* Nav bar */}
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="relative px-4 py-[0.55rem]">{/* increased from py-1.5 (~6px) to ~8.8px for ~15% taller nav */}
@@ -242,10 +490,10 @@ export default function Page() {
                   </div>
                 </div>
               </Link>
-              <a href="#about" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>About</a>
-              <a href="#lineup" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>Lineup</a>
-              <a href="#faqs" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>FAQs</a>
-              <a href="#contact" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}>Contact</a>
+              <a data-trace href="#about" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}><TraceLetters text="About" /></a>
+              <a data-trace href="#lineup" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}><TraceLetters text="Lineup" /></a>
+              <a data-trace href="#faqs" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}><TraceLetters text="FAQs" /></a>
+              <a data-trace href="#contact" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}><TraceLetters text="Contact" /></a>
             </div>
             <div className="flex items-center space-x-4">
               <a
@@ -300,18 +548,21 @@ export default function Page() {
 
       {/* About Section */}
       <section id="about" className="py-16 px-4">
-        <div className="w-full grid md:grid-cols-2 md:grid-rows-[auto_auto] gap-10 md:gap-8 lg:gap-12 xl:gap-16">
-          <h2 className="text-6xl font-bold text-black md:col-span-2">About</h2>
-          <div ref={aboutParaRef} className="max-w-3xl md:max-w-none md:pr-2 lg:pr-4 xl:pr-6 space-y-8">
-            <p className="text-[2.25rem] sm:text-[2.75rem] md:text-[3.0rem] leading-[1.08] text-black font-light tracking-tight">
-              Overtone Festival is a new open-air music festival coming to Musgrave Park on the Gold Coast.
-            </p>
-            <p className="text-[2.25rem] sm:text-[2.75rem] md:text-[3.0rem] leading-[1.08] text-black font-light tracking-tight">
-              Set across two outdoor stages, it brings together some of the best international and Australian electronic artists for a full day of music, dancing, and good vibes.
-            </p>
-            <p className="text-[2.25rem] sm:text-[2.75rem] md:text-[3.0rem] leading-[1.08] text-black font-light tracking-tight">
-              Expect high-quality sound, creative stage design, and a vibrant atmosphere surrounded by the park’s greenery.
-            </p>
+        <div className="w-full">
+          <h2 className="text-6xl font-bold text-black mb-10"><TraceLetters text="About" /></h2>
+          <div className="grid md:grid-cols-2 gap-10 md:gap-8 lg:gap-12 xl:gap-16">
+            <div ref={aboutParaRef} className="max-w-3xl md:max-w-none md:pr-2 lg:pr-4 xl:pr-6 space-y-8">
+            {[
+              'Overtone Festival is a new open-air music festival coming to Musgrave Park on the Gold Coast.',
+              'Set across two outdoor stages, it brings together some of the best international and Australian electronic artists for a full day of music, dancing, and good vibes.',
+              'Expect high-quality sound, creative stage design, and a vibrant atmosphere surrounded by the park\u2019s greenery.'
+            ].map((para, i) => (
+              <p key={i} className="text-[2.25rem] sm:text-[2.75rem] md:text-[3.0rem] leading-[1.08] text-black font-light tracking-tight">
+                {Array.from(para).map((ch, idx) => (
+                  <span key={idx} data-trace-letter className={ch === ' ' ? 'inline-block w-[0.4ch]' : ''}>{ch}</span>
+                ))}
+              </p>
+            ))}
           </div>
           <div className="relative w-full border border-black/20 bg-black/5 h-[60vh] md:h-auto md:min-h-full" style={{ height: typeof window !== 'undefined' && window.innerWidth >= 768 ? (aboutTextHeight || undefined) : undefined }}>
             <Image
@@ -327,13 +578,14 @@ export default function Page() {
               blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
             />
           </div>
+          </div>
         </div>
       </section>
 
       {/* Lineup Section */}
       <section id="lineup" className="py-16 px-4">
         <div className="w-full">
-          <h2 className="text-6xl font-bold text-black mb-10">Lineup</h2>
+          <h2 className="text-6xl font-bold text-black mb-10"><TraceLetters text="Lineup" /></h2>
           <ul className="flex flex-col gap-3" style={{ fontFamily: 'var(--font-header)' }}>
             {lineupAll.map(item => (
               <li
@@ -354,6 +606,7 @@ export default function Page() {
                       {Array.from(item.name).map((ch, i) => (
                         <span
                           key={i}
+                          data-trace-letter
                           className="inline-block transition-all duration-200 ease-out group-hover:[transition-duration:260ms] group-hover:font-[600] group-hover:scale-[1.04]"
                         >
                           {ch === ' ' ? '\u00A0' : ch}
@@ -361,7 +614,11 @@ export default function Page() {
                       ))}
                     </span>
                     <span className="text-3xl md:text-6xl tracking-tight min-w-[4rem] text-right font-light no-stroke" style={{ fontFamily: 'var(--font-header)', fontWeight: 300 }}>
-                      {item.code}
+                      {Array.from(item.code).map((ch, i) => (
+                        <span key={i} data-trace-letter className="inline-block">
+                          {ch === ' ' ? '\u00A0' : ch}
+                        </span>
+                      ))}
                     </span>
                   </div>
                 ) : (
@@ -371,6 +628,7 @@ export default function Page() {
                       {Array.from(item.name).map((ch, i) => (
                         <span
                           key={i}
+                          data-trace-letter
                           className="inline-block"
                         >
                           {ch === ' ' ? '\u00A0' : ch}
@@ -378,7 +636,11 @@ export default function Page() {
                       ))}
                     </span>
                     <span className="text-3xl md:text-6xl tracking-tight min-w-[4rem] text-right font-light no-stroke" style={{ fontFamily: 'var(--font-header)', fontWeight: 300 }}>
-                      {item.code}
+                      {Array.from(item.code).map((ch, i) => (
+                        <span key={i} data-trace-letter className="inline-block">
+                          {ch === ' ' ? '\u00A0' : ch}
+                        </span>
+                      ))}
                     </span>
                   </div>
                 )}
@@ -450,7 +712,7 @@ export default function Page() {
       {/* FAQs Section */}
       <section id="faqs" className="py-16 px-4">
         <div className="w-full">
-          <h2 className="text-6xl font-bold text-black mb-6">FAQs</h2>
+            <h2 className="text-6xl font-bold text-black mb-6"><TraceLetters text="FAQs" /></h2>
           {faqCategories.map(cat => (
             <div key={cat.category} className="mb-12">
               <h3 className="text-3xl md:text-4xl font-bold text-black mb-4" style={{ fontFamily: 'var(--font-header)' }}>{cat.category}</h3>
@@ -467,9 +729,11 @@ export default function Page() {
       {/* Contact Section */}
       <section id="contact" className="py-16 px-4">
         <div className="w-full text-center">
-          <h2 className="text-6xl font-bold text-black mb-6">Contact</h2>
+          <h2 data-trace className="text-6xl font-bold mb-8"><TraceLetters text="Contact" /></h2>
           <p className="text-lg text-black mb-4">
-            Have a question? Get in touch with our team.
+            {Array.from('Have a question? Get in touch with our team.').map((ch, idx) => (
+              <span key={idx} data-trace-letter className={ch === ' ' ? 'inline-block w-[0.35ch]' : ''}>{ch}</span>
+            ))}
           </p>
           <a
             href="mailto:hello@overtonefestival.com.au"
@@ -484,14 +748,20 @@ export default function Page() {
       <footer className="py-12 px-4 border-t border-black/20">
         <div className="w-full text-center space-y-4">
           <p className="text-xs text-black">
-            We acknowledge the Traditional Custodians of the land on which we gather, and pay our respects to Elders past and present.
+            {Array.from('We acknowledge the Traditional Custodians of the land on which we gather, and pay our respects to Elders past and present.').map((ch, idx) => (
+              <span key={idx} data-trace-letter className={ch === ' ' ? 'inline-block w-[0.33ch]' : ''}>{ch}</span>
+            ))}
           </p>
           <div className="flex justify-center space-x-6">
             <a href="https://www.instagram.com/overtone.festival/" target="_blank" rel="noopener noreferrer" className="text-black hover:underline">Instagram</a>
             <a href="https://www.facebook.com/profile.php?id=61579053744346" target="_blank" rel="noopener noreferrer" className="text-black hover:underline">Facebook</a>
             <a href="https://www.tiktok.com/@overtone.festival" target="_blank" rel="noopener noreferrer" className="text-black hover:underline">TikTok</a>
           </div>
-          <p className="text-xs text-black">© 2025 Overtone Festival. All rights reserved.</p>
+          <p className="text-xs text-black">
+            {Array.from('© 2025 Overtone Festival. All rights reserved.').map((ch, idx) => (
+              <span key={idx} data-trace-letter className={ch === ' ' ? 'inline-block w-[0.33ch]' : ''}>{ch}</span>
+            ))}
+          </p>
         </div>
       </footer>
     </>
