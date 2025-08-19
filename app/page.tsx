@@ -506,7 +506,7 @@ export default function Page() {
             </div>
             <div className="flex items-center space-x-4">
               <a
-                href="https://overtone.fillout.com/earlyaccess"
+                href="https://moshtix.com.au/v2/event/overtone-festival-2025/184344?skin=OTF25"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`tickets-btn px-3 sm:px-5 py-2 text-[0.92rem] sm:text-[1.15rem] font-semibold rounded-lg hover:opacity-90 transition-colors no-stroke inline-flex items-center leading-none ${pastHero ? 'bg-black !text-[var(--acid)]' : 'bg-[var(--acid)] !text-[var(--bg)]'}`}
