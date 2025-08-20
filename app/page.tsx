@@ -181,7 +181,7 @@ export default function Page() {
       const dt = Math.min(60, now - last)/1000; last = now;
       ctx.clearRect(0,0,width,height);
 
-      // Hero exclusion: no effect when cursor within hero video region or page top scrolled less than hero height
+      // Hero exclusion: only disable when cursor is within video bounds AND user is at top of page
       const heroEl = heroRef.current;
       let inHero = false;
       if (heroEl) {
@@ -193,9 +193,13 @@ export default function Page() {
           top: r.top + window.scrollY,
           bottom: r.bottom + window.scrollY
         };
-        inHero = mx >= heroDocRect.left && mx <= heroDocRect.right && my >= heroDocRect.top && my <= heroDocRect.bottom;
-        // Also suppress while top of page (before scrolling past hero) to avoid background motion behind logo/video
-        if (window.scrollY < r.height - 40) inHero = true;
+        const cursorInHeroArea = mx >= heroDocRect.left && mx <= heroDocRect.right && my >= heroDocRect.top && my <= heroDocRect.bottom;
+        
+        // Only suppress when cursor is in hero AND user hasn't scrolled much (still at very top of page)
+        // This allows tracing to be active when scrolled below the hero, even if video is partially visible
+        const stillAtTop = window.scrollY < 100; // Small threshold instead of full hero height
+        
+        inHero = cursorInHeroArea && stillAtTop;
       }
 
       if (inHero) { requestAnimationFrame(loop); return; }
