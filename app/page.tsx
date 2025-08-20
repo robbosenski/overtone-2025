@@ -38,13 +38,65 @@ export default function Page() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    let width = window.innerWidth, height = window.innerHeight;
+    // Device performance detection for adaptive quality
+    const isLowTierDevice = (() => {
+      // Check for various low-performance indicators
+      const ua = navigator.userAgent.toLowerCase();
+      const isOldAndroid = /android/.test(ua) && !/chrome\/[6-9][0-9]/.test(ua); // Pre-Chrome 60
+      const isOldIOS = /iphone|ipad/.test(ua) && /os [5-9]_/.test(ua); // iOS 5-9
+      const hasLowMemory = (navigator as any).deviceMemory && (navigator as any).deviceMemory <= 2; // 2GB or less
+      const hasSlowCPU = (navigator as any).hardwareConcurrency && (navigator as any).hardwareConcurrency <= 2; // 2 cores or less
+      const hasSlowConnection = (navigator as any).connection && (navigator as any).connection.effectiveType === 'slow-2g' || (navigator as any).connection?.effectiveType === '2g';
+      
+      return isOldAndroid || isOldIOS || hasLowMemory || hasSlowCPU || hasSlowConnection;
+    })();
+
+    // Check for extremely low-end devices that should disable tracing entirely
+    const isVeryLowTierDevice = (() => {
+      const ua = navigator.userAgent.toLowerCase();
+      const isVeryOldAndroid = /android [2-4]\./.test(ua); // Android 2-4
+      const isVeryOldIOS = /os [4-7]_/.test(ua); // iOS 4-7
+      const hasVeryLowMemory = (navigator as any).deviceMemory && (navigator as any).deviceMemory <= 1; // 1GB or less
+      
+      return isVeryOldAndroid || isVeryOldIOS || hasVeryLowMemory;
+    })();
+
+    // Exit early for very low-end devices
+    if (isVeryLowTierDevice) {
+      console.log('Tracing disabled for very low-tier device');
+      return;
+    }
+
+    // Adaptive quality settings
+    const quality = isLowTierDevice ? {
+      dpr: Math.min(window.devicePixelRatio || 1, 1.5), // Cap DPR for performance
+      particleCount: 20, // Reduce particles
+      maxActiveTargets: 30, // Reduce active targets
+      frameSkip: 2, // Skip every 2nd frame
+      interactionRadius: 180, // Smaller interaction area
+      enableScanlines: false, // Disable expensive scanlines
+      enableParticlePhysics: false // Simplify particle movement
+    } : {
+      dpr: window.devicePixelRatio || 1,
+      particleCount: 46,
+      maxActiveTargets: 90,
+      frameSkip: 1,
+      interactionRadius: 260,
+      enableScanlines: true,
+      enableParticlePhysics: true
+    };
+
+    // Log performance mode for debugging
+    console.log(`Tracing performance mode: ${isLowTierDevice ? 'Low-tier optimized' : 'High-performance'}`, quality);
+
+    let width = window.innerWidth, height = Math.max(window.innerHeight, document.documentElement.scrollHeight);
+    let frameCounter = 0; // For frame skipping
     const resize = () => {
-      width = window.innerWidth; height = window.innerHeight;
-      canvas.width = width * dpr; canvas.height = height * dpr;
+      width = window.innerWidth; 
+      height = Math.max(window.innerHeight, document.documentElement.scrollHeight);
+      canvas.width = width * quality.dpr; canvas.height = height * quality.dpr;
       canvas.style.width = width + 'px'; canvas.style.height = height + 'px';
-      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.setTransform(quality.dpr,0,0,quality.dpr,0,0);
     };
     resize();
     window.addEventListener('resize', resize);
@@ -52,21 +104,40 @@ export default function Page() {
     // Collect traceable elements (blocks + individual letters)
     let targets: { el: Element; rect: DOMRect; letter: boolean }[] = [];
     const collect = () => {
-      targets = Array.from(document.querySelectorAll('[data-trace],[data-trace-letter]')).map(el => ({
-        el,
-        rect: el.getBoundingClientRect(),
-        letter: (el as HTMLElement).hasAttribute('data-trace-letter')
-      }));
+      targets = Array.from(document.querySelectorAll('[data-trace],[data-trace-letter]')).map(el => {
+        const rect = el.getBoundingClientRect();
+        // Convert viewport coordinates to document coordinates
+        return {
+          el,
+          rect: new DOMRect(
+            rect.left + window.scrollX, 
+            rect.top + window.scrollY, 
+            rect.width, 
+            rect.height
+          ),
+          letter: (el as HTMLElement).hasAttribute('data-trace-letter')
+        };
+      });
     };
     collect();
     const refreshRects = () => {
-      for (const t of targets) t.rect = t.el.getBoundingClientRect();
+      for (const t of targets) {
+        const rect = t.el.getBoundingClientRect();
+        // Convert viewport coordinates to document coordinates
+        t.rect = new DOMRect(
+          rect.left + window.scrollX, 
+          rect.top + window.scrollY, 
+          rect.width, 
+          rect.height
+        );
+      }
     };
+    // Still need to update rects on scroll since elements move as content scrolls
     window.addEventListener('scroll', () => requestAnimationFrame(refreshRects), { passive: true });
 
   // Particles
     interface P { x:number; y:number; vx:number; vy:number; life:number; size:number; }
-    const particles: P[] = Array.from({ length: 46 }).map(() => ({
+    const particles: P[] = Array.from({ length: quality.particleCount }).map(() => ({
       x: Math.random()*width,
       y: Math.random()*height,
       vx: 0, vy: 0,
@@ -76,7 +147,11 @@ export default function Page() {
 
     // Mouse state
     let mx = width/2, my = height/2, active = false;
-    const move = (e: PointerEvent) => { mx = e.clientX; my = e.clientY; active = true; };
+    const move = (e: PointerEvent) => { 
+      mx = e.clientX; 
+      my = e.clientY + window.scrollY; // Adjust for scroll position since canvas is now absolute
+      active = true; 
+    };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerleave', () => { active = false; });
 
@@ -84,6 +159,13 @@ export default function Page() {
   // Random activation state map (letter targets flicker organically)
   const activation = new Map<Element, number>();
   const loop = (now: number) => {
+      // Frame skipping for low-tier devices
+      frameCounter++;
+      if (frameCounter % quality.frameSkip !== 0) {
+        requestAnimationFrame(loop);
+        return;
+      }
+
       const dt = Math.min(60, now - last)/1000; last = now;
       ctx.clearRect(0,0,width,height);
 
@@ -92,23 +174,31 @@ export default function Page() {
       let inHero = false;
       if (heroEl) {
         const r = heroEl.getBoundingClientRect();
-        inHero = mx >= r.left && mx <= r.right && my >= r.top && my <= r.bottom;
+        // Convert hero rect to document coordinates to match mouse coordinates
+        const heroDocRect = {
+          left: r.left + window.scrollX,
+          right: r.right + window.scrollX,
+          top: r.top + window.scrollY,
+          bottom: r.bottom + window.scrollY
+        };
+        inHero = mx >= heroDocRect.left && mx <= heroDocRect.right && my >= heroDocRect.top && my <= heroDocRect.bottom;
         // Also suppress while top of page (before scrolling past hero) to avoid background motion behind logo/video
         if (window.scrollY < r.height - 40) inHero = true;
       }
 
       if (inHero) { requestAnimationFrame(loop); return; }
 
-  // Vertical scanlines subtle
-      ctx.save();
-      ctx.globalAlpha = 0.05;
-      ctx.fillStyle = '#000';
-      for (let x=0; x<width; x+=4) ctx.fillRect(x,0,1,height);
-      ctx.restore();
+      // Vertical scanlines (disabled on low-tier devices for performance)
+      if (quality.enableScanlines) {
+        ctx.save();
+        ctx.globalAlpha = 0.05;
+        ctx.fillStyle = '#000';
+        for (let x=0; x<width; x+=4) ctx.fillRect(x,0,1,height);
+        ctx.restore();
+      }
 
-      // Particle physics
-  // Skip particle simulation & drawing if cursor not near any target (nearestDist gating computed later)
-  particles.forEach(p => {
+      // Particle physics (simplified for low-tier devices)
+      particles.forEach(p => {
         p.life -= dt*0.15;
         if (p.life <= 0) {
           p.x = active ? mx + (Math.random()*120-60) : Math.random()*width;
@@ -117,29 +207,42 @@ export default function Page() {
           p.life = 0.6 + Math.random()*0.9;
           p.size = 2 + Math.random()*2.2;
         }
-        if (active) {
-          const dx = mx - p.x, dy = my - p.y; const dist = Math.hypot(dx,dy) || 1;
-          const f = Math.min(180, 260/dist);
-          p.vx += (dx/dist)*f*dt*0.65;
-          p.vy += (dy/dist)*f*dt*0.65;
+        
+        if (quality.enableParticlePhysics) {
+          // Full physics for high-end devices
+          if (active) {
+            const dx = mx - p.x, dy = my - p.y; const dist = Math.hypot(dx,dy) || 1;
+            const f = Math.min(180, 260/dist);
+            p.vx += (dx/dist)*f*dt*0.65;
+            p.vy += (dy/dist)*f*dt*0.65;
+          }
+          // Nearby target attraction
+          let closest: DOMRect | null = null; let closestD = Infinity;
+          for (const t of targets) {
+            const cx = t.rect.left + t.rect.width/2;
+              const cy = t.rect.top + t.rect.height/2;
+              const dx = cx - p.x, dy = cy - p.y; const d = dx*dx+dy*dy;
+              if (d < 150*150 && d < closestD) { closestD = d; closest = t.rect; }
+          }
+          if (closest) {
+            const cx = closest.left + closest.width/2;
+            const cy = closest.top + closest.height/2;
+            const dx = cx - p.x, dy = cy - p.y; const dist = Math.hypot(dx,dy)||1;
+            p.vx += (dx/dist)*30*dt;
+            p.vy += (dy/dist)*30*dt;
+          }
+          p.vx *= 0.9; p.vy *= 0.9;
+          p.x += p.vx*dt*60; p.y += p.vy*dt*60;
+        } else {
+          // Simplified movement for low-tier devices
+          if (active) {
+            const dx = mx - p.x, dy = my - p.y;
+            p.x += dx * dt * 0.3;
+            p.y += dy * dt * 0.3;
+          }
         }
-        // Nearby target attraction
-        let closest: DOMRect | null = null; let closestD = Infinity;
-        for (const t of targets) {
-          const cx = t.rect.left + t.rect.width/2;
-            const cy = t.rect.top + t.rect.height/2;
-            const dx = cx - p.x, dy = cy - p.y; const d = dx*dx+dy*dy;
-            if (d < 150*150 && d < closestD) { closestD = d; closest = t.rect; }
-        }
-        if (closest) {
-          const cx = closest.left + closest.width/2;
-          const cy = closest.top + closest.height/2;
-          const dx = cx - p.x, dy = cy - p.y; const dist = Math.hypot(dx,dy)||1;
-          p.vx += (dx/dist)*30*dt;
-          p.vy += (dy/dist)*30*dt;
-        }
-        p.vx *= 0.9; p.vy *= 0.9;
-        p.x += p.vx*dt*60; p.y += p.vy*dt*60;
+        
+        // Boundary wrapping
         if (p.x < -40) p.x = width+40; else if (p.x > width+40) p.x = -40;
         if (p.y < -40) p.y = height+40; else if (p.y > height+40) p.y = -40;
       });
@@ -156,9 +259,9 @@ export default function Page() {
         const dx = cx - mx, dy = cy - my; const d = Math.hypot(dx,dy);
         if (d < nearestDist) nearestDist = d;
       }
-      const interactionRadius = 260; // only activate inside this
-      const maxSimulLetters = 90; // safety cap
-  const decay = dt * 0.25; // slower fade so items linger
+      const interactionRadius = quality.interactionRadius;
+      const maxSimulLetters = quality.maxActiveTargets;
+      const decay = dt * 0.25; // slower fade so items linger
       // Pre-pass: compute / attempt activation
       for (const t of targets) {
   const { left, top, width: w, height: h } = t.rect;
@@ -296,14 +399,65 @@ export default function Page() {
     '/about/optimized/260813_OVERTONE_VENUE_STILL_010.jpg'
   ];
   const [aboutIndex, setAboutIndex] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState<Set<number>>(new Set([0])); // Track loaded images
+  const [nextImageReady, setNextImageReady] = useState(true); // Ready to transition
   const aboutParaRef = useRef<HTMLParagraphElement | null>(null);
   const [aboutTextHeight, setAboutTextHeight] = useState(0);
+  
+  // Preload next images
   useEffect(() => {
+    const preloadNext = () => {
+      const nextIndex = (aboutIndex + 1) % aboutImages.length;
+      const nextNextIndex = (aboutIndex + 2) % aboutImages.length;
+      
+      // Preload next 2 images
+      [nextIndex, nextNextIndex].forEach(index => {
+        if (!imageLoaded.has(index)) {
+          const img = new window.Image();
+          img.onload = () => {
+            setImageLoaded(prev => new Set([...prev, index]));
+          };
+          img.src = aboutImages[index];
+        }
+      });
+    };
+    
+    preloadNext();
+  }, [aboutIndex, aboutImages, imageLoaded]);
+  
+  // Only advance slideshow when next image is ready
+  useEffect(() => {
+    const baseInterval = 650;
+    let dynamicInterval = baseInterval;
+    
     const id = setInterval(() => {
-      setAboutIndex(i => (i + 1) % aboutImages.length);
-    }, 650); // faster (~3x)
+      const nextIndex = (aboutIndex + 1) % aboutImages.length;
+      
+      if (imageLoaded.has(nextIndex)) {
+        setAboutIndex(nextIndex);
+        dynamicInterval = baseInterval; // Reset to normal speed
+      } else {
+        // If next image isn't loaded, extend the interval slightly
+        dynamicInterval = Math.min(baseInterval * 2, 1300); // Max 2x slower
+        clearInterval(id);
+        
+        // Set a new timeout with extended interval
+        const extendedId = setTimeout(() => {
+          // Check again, or force advance if too much time has passed
+          if (imageLoaded.has(nextIndex)) {
+            setAboutIndex(nextIndex);
+          } else {
+            // Force advance after waiting - better than stopping completely
+            setAboutIndex(nextIndex);
+          }
+        }, dynamicInterval - baseInterval);
+        
+        return () => clearTimeout(extendedId);
+      }
+    }, dynamicInterval);
+    
     return () => clearInterval(id);
-  }, [aboutImages.length]);
+  }, [aboutIndex, aboutImages.length, imageLoaded]);
 
   // Helper to output per-letter traceable spans
   const TraceLetters = ({ text, className }: { text: string; className?: string }) => (
@@ -435,7 +589,7 @@ export default function Page() {
   return (
     <>
   {/* Mouse tracing overlay */}
-  <canvas ref={traceCanvasRef} className="fixed inset-0 pointer-events-none z-30 mix-blend-multiply" aria-hidden="true" />
+  <canvas ref={traceCanvasRef} className="absolute inset-0 pointer-events-none z-30 mix-blend-multiply" aria-hidden="true" />
       {/* Nav bar */}
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="relative px-4 py-[0.55rem]">{/* increased from py-1.5 (~6px) to ~8.8px for ~15% taller nav */}
@@ -564,19 +718,56 @@ export default function Page() {
               </p>
             ))}
           </div>
-          <div className="relative w-full border border-black/20 bg-black/5 h-[60vh] md:h-auto md:min-h-full" style={{ height: typeof window !== 'undefined' && window.innerWidth >= 768 ? (aboutTextHeight || undefined) : undefined }}>
-            <Image
-              key={aboutImages[aboutIndex]}
-              src={aboutImages[aboutIndex]}
-              alt="Overtone Festival venue"
-              fill
-              sizes="(max-width:768px) 100vw, 50vw"
-              className="object-cover"
-              quality={75}
-              priority={aboutIndex === 0}
-              placeholder="blur"
-              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-            />
+          <div className="relative w-full border border-black/20 bg-black/5 h-[60vh] md:h-auto md:min-h-full overflow-hidden" style={{ height: typeof window !== 'undefined' && window.innerWidth >= 768 ? (aboutTextHeight || undefined) : undefined }}>
+            {/* Loading indicator for current image */}
+            {!imageLoaded.has(aboutIndex) && (
+              <div className="absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center z-10">
+                <div className="text-black/60 text-sm">Loading...</div>
+              </div>
+            )}
+            
+            {/* Slideshow progress indicators */}
+            <div className="absolute bottom-4 left-4 flex space-x-1 z-20">
+              {aboutImages.map((_, index) => (
+                <div
+                  key={index}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    index === aboutIndex 
+                      ? 'bg-white shadow-lg' 
+                      : imageLoaded.has(index) 
+                        ? 'bg-white/60' 
+                        : 'bg-white/30'
+                  }`}
+                />
+              ))}
+            </div>
+            
+            {/* Render all images with opacity transitions instead of remounting */}
+            {aboutImages.map((src, index) => (
+              <Image
+                key={src}
+                src={src}
+                alt="Overtone Festival venue"
+                fill
+                sizes="(max-width:768px) 100vw, 50vw"
+                className={`object-cover transition-opacity duration-500 ease-in-out ${
+                  index === aboutIndex && imageLoaded.has(index) ? 'opacity-100' : 'opacity-0'
+                }`}
+                quality={75}
+                priority={index === 0 || index === 1} // Prioritize first two images
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                loading={index <= 2 ? "eager" : "lazy"} // Load first 3 images eagerly
+                onLoad={() => {
+                  setImageLoaded(prev => new Set([...prev, index]));
+                }}
+                onError={() => {
+                  // Handle image load errors gracefully
+                  console.warn(`Failed to load image: ${src}`);
+                  setImageLoaded(prev => new Set([...prev, index])); // Mark as "loaded" to prevent blocking
+                }}
+              />
+            ))}
           </div>
           </div>
         </div>
