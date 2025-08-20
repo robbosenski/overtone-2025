@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import type { ReactNode } from 'react';
 
 export default function Page() {
@@ -44,9 +44,18 @@ export default function Page() {
       const ua = navigator.userAgent.toLowerCase();
       const isOldAndroid = /android/.test(ua) && !/chrome\/[6-9][0-9]/.test(ua); // Pre-Chrome 60
       const isOldIOS = /iphone|ipad/.test(ua) && /os [5-9]_/.test(ua); // iOS 5-9
-      const hasLowMemory = (navigator as any).deviceMemory && (navigator as any).deviceMemory <= 2; // 2GB or less
-      const hasSlowCPU = (navigator as any).hardwareConcurrency && (navigator as any).hardwareConcurrency <= 2; // 2 cores or less
-      const hasSlowConnection = (navigator as any).connection && (navigator as any).connection.effectiveType === 'slow-2g' || (navigator as any).connection?.effectiveType === '2g';
+      
+      // Type-safe checks for experimental navigator APIs
+      const navWithMemory = navigator as Navigator & { deviceMemory?: number };
+      const navWithConcurrency = navigator as Navigator & { hardwareConcurrency?: number };
+      const navWithConnection = navigator as Navigator & { 
+        connection?: { effectiveType?: string } 
+      };
+      
+      const hasLowMemory = navWithMemory.deviceMemory && navWithMemory.deviceMemory <= 2; // 2GB or less
+      const hasSlowCPU = navWithConcurrency.hardwareConcurrency && navWithConcurrency.hardwareConcurrency <= 2; // 2 cores or less
+      const hasSlowConnection = navWithConnection.connection && 
+        (navWithConnection.connection.effectiveType === 'slow-2g' || navWithConnection.connection.effectiveType === '2g');
       
       return isOldAndroid || isOldIOS || hasLowMemory || hasSlowCPU || hasSlowConnection;
     })();
@@ -56,7 +65,10 @@ export default function Page() {
       const ua = navigator.userAgent.toLowerCase();
       const isVeryOldAndroid = /android [2-4]\./.test(ua); // Android 2-4
       const isVeryOldIOS = /os [4-7]_/.test(ua); // iOS 4-7
-      const hasVeryLowMemory = (navigator as any).deviceMemory && (navigator as any).deviceMemory <= 1; // 1GB or less
+      
+      // Type-safe check for device memory
+      const navWithMemory = navigator as Navigator & { deviceMemory?: number };
+      const hasVeryLowMemory = navWithMemory.deviceMemory && navWithMemory.deviceMemory <= 1; // 1GB or less
       
       return isVeryOldAndroid || isVeryOldIOS || hasVeryLowMemory;
     })();
@@ -386,8 +398,8 @@ export default function Page() {
     }
   };
 
-  // About section slideshow images (optimized versions)
-  const aboutImages = [
+  // About section slideshow images (optimized versions) - memoized to prevent re-creation
+  const aboutImages = useMemo(() => [
     '/about/optimized/260813_OVERTONE_VENUE_STILL_001.jpg',
     '/about/optimized/260813_OVERTONE_VENUE_STILL_002.jpg',
     '/about/optimized/260813_OVERTONE_VENUE_STILL_003.jpg',
@@ -397,10 +409,9 @@ export default function Page() {
     '/about/optimized/260813_OVERTONE_VENUE_STILL_008.jpg',
     '/about/optimized/260813_OVERTONE_VENUE_STILL_009.jpg',
     '/about/optimized/260813_OVERTONE_VENUE_STILL_010.jpg'
-  ];
+  ], []);
   const [aboutIndex, setAboutIndex] = useState(0);
   const [imageLoaded, setImageLoaded] = useState<Set<number>>(new Set([0])); // Track loaded images
-  const [nextImageReady, setNextImageReady] = useState(true); // Ready to transition
   const aboutParaRef = useRef<HTMLParagraphElement | null>(null);
   const [aboutTextHeight, setAboutTextHeight] = useState(0);
   
@@ -728,7 +739,7 @@ export default function Page() {
             
             {/* Slideshow progress indicators */}
             <div className="absolute bottom-4 left-4 flex space-x-1 z-20">
-              {aboutImages.map((_, index) => (
+              {aboutImages.map((_: string, index: number) => (
                 <div
                   key={index}
                   className={`w-2 h-2 rounded-full transition-all duration-300 ${
@@ -743,7 +754,7 @@ export default function Page() {
             </div>
             
             {/* Render all images with opacity transitions instead of remounting */}
-            {aboutImages.map((src, index) => (
+            {aboutImages.map((src: string, index: number) => (
               <Image
                 key={src}
                 src={src}
