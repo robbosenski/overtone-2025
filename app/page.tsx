@@ -2,11 +2,10 @@
 
 import Image from "next/image";
 import MuxPlayer from "@mux/mux-player-react";
-import type MuxPlayerElement from "@mux/mux-player";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ElementRef } from "react";
 
 export default function Page() {
-  const videoRef = useRef<MuxPlayerElement | null>(null);
+  const videoRef = useRef<ElementRef<typeof MuxPlayer> | null>(null);
   const heroRef = useRef<HTMLElement | null>(null);
   const [muted, setMuted] = useState(true);
   // Mouse tracing canvas
