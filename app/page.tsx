@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import MuxPlayer from "@mux/mux-player-react";
-import { useState, useRef, useEffect, type ElementRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function Page() {
-  const videoRef = useRef<ElementRef<typeof MuxPlayer> | null>(null);
+  const videoRef = useRef<HTMLElement | null>(null);
   const heroRef = useRef<HTMLElement | null>(null);
   const [muted, setMuted] = useState(true);
   // Mouse tracing canvas
@@ -424,7 +424,7 @@ export default function Page() {
                 className="text-[1.6rem] font-semibold leading-snug !text-[var(--acid)] sm:text-[2.2rem] lg:text-[2.7rem]"
                 style={{ fontFamily: "var(--font-header)" }}
               >
-                <WaveText text="To stay up to date on news and information subscribe to our mailing list below" />
+                To stay up to date on news and information subscribe to our mailing list below
               </h1>
               </div>
 
@@ -481,7 +481,7 @@ export default function Page() {
         {/* Audio toggle button */}
         <button
           onClick={() => {
-            const v = videoRef.current;
+            const v = videoRef.current as unknown as HTMLMediaElement | null;
             if (!v) return;
             const nextMuted = !v.muted;
             v.muted = nextMuted;
@@ -512,35 +512,5 @@ export default function Page() {
         </button>
       </section>
     </>
-  );
-}
-
-function WaveText({ text }: { text: string }) {
-  let index = 0;
-  const words = text.split(" ");
-  const wordsLength = words.length;
-  return (
-    <span className="wave-text">
-      {words.map((word, wi) => {
-        const letters = Array.from(word).map((ch) => {
-          const key = `${ch}-${index}`;
-          const letterStyle = { "--i": index } as const;
-          const letter = (
-            <span key={key} style={letterStyle}>
-              {ch}
-            </span>
-          );
-          index += 1;
-          return letter;
-        });
-
-        return (
-          <span key={`word-${wi}`} className="wave-word">
-            {letters}
-            {wi < wordsLength - 1 ? "\u00A0" : null}
-          </span>
-        );
-      })}
-    </span>
   );
 }

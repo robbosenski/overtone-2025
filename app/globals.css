@@ -196,26 +196,3 @@ mux-player.hero-video [aria-live] {
 .holo-btn:hover {
   border-color: rgba(232, 255, 105, 1);
 }
-
-/* Subtle variable-weight wave animation */
-.wave-text {
-  display: inline-block;
-}
-
-.wave-text span {
-  display: inline-block;
-  font-variation-settings: "wght" 520;
-  animation: weight-wave 2.6s ease-in-out infinite;
-  animation-delay: calc(var(--i, 0) * 0.05s);
-}
-
-.wave-word {
-  display: inline-block;
-  white-space: nowrap;
-}
-
-@keyframes weight-wave {
-  0% { font-variation-settings: "wght" 320; }
-  50% { font-variation-settings: "wght" 850; }
-  100% { font-variation-settings: "wght" 320; }
-}
