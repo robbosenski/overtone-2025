@@ -524,7 +524,7 @@ function WaveText({ text }: { text: string }) {
       {words.map((word, wi) => {
         const letters = Array.from(word).map((ch) => {
           const key = `${ch}-${index}`;
-          const letterStyle: CSSProperties = { ["--i" as "--i"]: index };
+          const letterStyle = { "--i": index } as const;
           const letter = (
             <span key={key} style={letterStyle}>
               {ch}
