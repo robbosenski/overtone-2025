@@ -8,6 +8,7 @@ export default function Page() {
   const videoRef = useRef<ElementRef<typeof MuxPlayer> | null>(null);
   const heroRef = useRef<HTMLElement | null>(null);
   const [muted, setMuted] = useState(true);
+  const [videoReady, setVideoReady] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formStatus, setFormStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [formError, setFormError] = useState<string | null>(null);
@@ -443,9 +444,12 @@ export default function Page() {
           loop
           muted={muted}
           playsInline
-          poster="/brand/hero-poster.jpg"
+          preload="auto"
+          poster="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
           metadataVideoTitle="Overtone Festival Aftermovie"
           metadataVideoId="overtone-2025-aftermovie"
+          onCanPlay={() => setVideoReady(true)}
+          onPlaying={() => setVideoReady(true)}
         />
           <div className="safe-area relative z-10 flex min-h-[100svh] w-full px-6">
             <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center text-[var(--acid)] no-stroke">
@@ -477,7 +481,11 @@ export default function Page() {
 
               <div className="flex-1" />
 
-              <div className="flex flex-col items-center gap-5 pb-6">
+              <div
+                className={`flex flex-col items-center gap-5 pb-6 transition-opacity duration-500 ${
+                  videoReady ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => {
@@ -542,7 +550,9 @@ export default function Page() {
             }
             setMuted(nextMuted);
           }}
-          className="audio-toggle absolute right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-[var(--acid)] border border-white/20 backdrop-blur-sm hover:bg-black/70 transition"
+          className={`audio-toggle absolute right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-[var(--acid)] border border-white/20 backdrop-blur-sm hover:bg-black/70 transition ${
+            videoReady ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
           aria-label={muted ? 'Unmute hero video' : 'Mute hero video'}
         >
           {muted ? (
@@ -579,6 +589,14 @@ export default function Page() {
             >
               X
             </button>
+            <div className="modal-logo">
+              <Image
+                src="/logo-wordmark.svg"
+                alt="Overtone Festival"
+                width={300}
+                height={60}
+              />
+            </div>
             <h2 style={{ fontFamily: "var(--font-header)" }}>Join the list</h2>
             <p>Stay in the loop for 2026.</p>
             <form onSubmit={handleSubmit} className="modal-form">

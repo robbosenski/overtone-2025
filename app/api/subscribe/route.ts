@@ -65,6 +65,52 @@ export async function POST(request: Request) {
   });
 
   if (response.ok) {
+    const templateId = process.env.BREVO_CONFIRM_TEMPLATE_ID;
+    const senderEmail = process.env.BREVO_SENDER_EMAIL;
+    const senderName = process.env.BREVO_SENDER_NAME || "Overtone Festival";
+
+    if (!templateId || !senderEmail) {
+      return NextResponse.json(
+        { error: "Confirmation email not configured. Set BREVO_CONFIRM_TEMPLATE_ID and BREVO_SENDER_EMAIL." },
+        { status: 500 }
+      );
+    }
+
+    const firstName = payload.firstName?.trim() || "";
+    const lastName = payload.lastName?.trim() || "";
+    const contactName = `${firstName} ${lastName}`.trim() || email;
+
+    const emailResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": apiKey,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        to: [{ email, name: contactName }],
+        sender: { email: senderEmail, name: senderName },
+        templateId: Number(templateId),
+        params: {
+          FIRSTNAME: firstName,
+          LASTNAME: lastName,
+          FNAME: firstName,
+          LNAME: lastName,
+        },
+      }),
+    });
+
+    if (!emailResponse.ok) {
+      let sendError = "Unable to send confirmation email.";
+      try {
+        const data = await emailResponse.json();
+        sendError = data?.message || sendError;
+      } catch {
+        // ignore
+      }
+      return NextResponse.json({ error: sendError }, { status: 500 });
+    }
+
     return NextResponse.json({ success: true });
   }
 

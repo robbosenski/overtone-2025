@@ -226,12 +226,28 @@ mux-player.hero-video [aria-live] {
 
 .modal-panel h2 {
   font-size: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0;
+  margin-bottom: 0.3rem;
+}
+
+.modal-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0;
+  filter: brightness(0) saturate(100%) invert(90%) sepia(80%) saturate(850%) hue-rotate(6deg) brightness(106%) contrast(101%);
+}
+
+.modal-logo img {
+  height: auto;
+  width: 100%;
+  max-width: 220px;
+  display: block;
 }
 
 .modal-panel p {
   margin-bottom: 1.5rem;
   color: rgba(232, 255, 105, 0.8);
+  text-align: center;
 }
 
 .modal-close {
@@ -297,6 +313,7 @@ mux-player.hero-video [aria-live] {
 .modal-success {
   color: #b5ff9f;
   font-size: 0.85rem;
+  text-align: center;
 }
 
 .modal-submit {
