@@ -1,33 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useState, useRef, useEffect, useMemo } from "react";
-import type { ReactNode } from 'react';
+import MuxPlayer, { type MuxPlayerElement } from "@mux/mux-player-react";
+import { useState, useRef, useEffect } from "react";
 
 export default function Page() {
-  // Unified lineup list with country codes
-  const lineupAll = [
-    { name: "FOUR TET", code: "UK", spotify: "https://open.spotify.com/embed/artist/7Eu1txygG6nJttLHbZdQOh" },
-    { name: "X CLUB.", code: "AU", spotify: "https://open.spotify.com/embed/artist/4CYPaFp9yDrNduNptv0DPQ" },
-    { name: "FLOATING POINTS", code: "UK", spotify: "https://open.spotify.com/embed/artist/2AR42Ur9PcchQDtEdwkv4L" },
-    { name: "1TBSP", code: "AU", spotify: "https://open.spotify.com/embed/artist/6G01WYFYF91rjG5LtwMhY4" },
-    { name: "ATSUO THE PINEAPPLE DONKEY (LIVE)", code: "JP" },
-    { name: "FUKHED", code: "AU", soundcloud: "https://soundcloud.com/fukhedaus/breakmyheart" },
-    { name: "IN2STELLAR", code: "AU", spotify: "https://open.spotify.com/embed/artist/6JDTszsnsJ44yCRBnISbVq" },
-    { name: "MIKALAH WATEGO", code: "AU", soundcloud: "https://soundcloud.com/resident-advisor/ra-live-mikalah-watego-pitch-music-arts-2025-australia" },
-    { name: "INVT B2B SKEE MASK", code: "US/DE", soundcloud: "https://soundcloud.com/climate-of-fear/invt-b2b-skee-mask-climate-of-fear" },
-    { name: "SUPERGLOSS", code: "DE", spotify: "https://open.spotify.com/embed/artist/7uvZrAOASv4qg1VawEFR7Z" },
-    { name: "WOLTERS", code: "AU", spotify: "https://open.spotify.com/embed/artist/3gWrhUgsZptXzw4SHZUgOl" },
-  ];
-  const [heroVideoActive, setHeroVideoActive] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = useRef<MuxPlayerElement | null>(null);
   const heroRef = useRef<HTMLElement | null>(null);
-  const [pastHero, setPastHero] = useState(false);
-  const [heroHeight, setHeroHeight] = useState(0);
-  const [openArtist, setOpenArtist] = useState<string | null>(null);
   const [muted, setMuted] = useState(true);
-  const [loadedPlayers, setLoadedPlayers] = useState<Set<string>>(new Set());
   // Mouse tracing canvas
   const traceCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -385,612 +365,181 @@ export default function Page() {
     };
   }, []);
 
-  // Helper function to toggle artist and clear loading state when closing
-  const toggleArtist = (artistName: string) => {
-    if (openArtist === artistName) {
-      // Closing - clear the loading state for this artist
-      setLoadedPlayers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(`spotify-${artistName}`);
-        newSet.delete(`soundcloud-${artistName}`);
-        return newSet;
-      });
-      setOpenArtist(null);
-    } else {
-      // Opening
-      setOpenArtist(artistName);
-    }
-  };
-
-  // About section slideshow images (optimized versions) - memoized to prevent re-creation
-  const aboutImages = useMemo(() => [
-    '/about/optimized/260813_OVERTONE_VENUE_STILL_001.jpg',
-    '/about/optimized/260813_OVERTONE_VENUE_STILL_002.jpg',
-    '/about/optimized/260813_OVERTONE_VENUE_STILL_003.jpg',
-    '/about/optimized/260813_OVERTONE_VENUE_STILL_004.jpg',
-    '/about/optimized/260813_OVERTONE_VENUE_STILL_006.jpg',
-    '/about/optimized/260813_OVERTONE_VENUE_STILL_007.jpg',
-    '/about/optimized/260813_OVERTONE_VENUE_STILL_008.jpg',
-    '/about/optimized/260813_OVERTONE_VENUE_STILL_009.jpg',
-    '/about/optimized/260813_OVERTONE_VENUE_STILL_010.jpg'
-  ], []);
-  const [aboutIndex, setAboutIndex] = useState(0);
-  const [imageLoaded, setImageLoaded] = useState<Set<number>>(new Set([0])); // Track loaded images
-  const aboutParaRef = useRef<HTMLParagraphElement | null>(null);
-  const [aboutTextHeight, setAboutTextHeight] = useState(0);
-  
-  // Preload next images
+  // Ensure full-bleed video height on iOS dynamic viewport changes
   useEffect(() => {
-    const preloadNext = () => {
-      const nextIndex = (aboutIndex + 1) % aboutImages.length;
-      const nextNextIndex = (aboutIndex + 2) % aboutImages.length;
-      
-      // Preload next 2 images
-      [nextIndex, nextNextIndex].forEach(index => {
-        if (!imageLoaded.has(index)) {
-          const img = new window.Image();
-          img.onload = () => {
-            setImageLoaded(prev => new Set([...prev, index]));
-          };
-          img.src = aboutImages[index];
-        }
-      });
+    const setAppHeight = () => {
+      const height = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty("--app-height", `${height}px`);
     };
-    
-    preloadNext();
-  }, [aboutIndex, aboutImages, imageLoaded]);
-  
-  // Only advance slideshow when next image is ready
-  useEffect(() => {
-    const baseInterval = 650;
-    let dynamicInterval = baseInterval;
-    
-    const id = setInterval(() => {
-      const nextIndex = (aboutIndex + 1) % aboutImages.length;
-      
-      if (imageLoaded.has(nextIndex)) {
-        setAboutIndex(nextIndex);
-        dynamicInterval = baseInterval; // Reset to normal speed
-      } else {
-        // If next image isn't loaded, extend the interval slightly
-        dynamicInterval = Math.min(baseInterval * 2, 1300); // Max 2x slower
-        clearInterval(id);
-        
-        // Set a new timeout with extended interval
-        const extendedId = setTimeout(() => {
-          // Check again, or force advance if too much time has passed
-          if (imageLoaded.has(nextIndex)) {
-            setAboutIndex(nextIndex);
-          } else {
-            // Force advance after waiting - better than stopping completely
-            setAboutIndex(nextIndex);
-          }
-        }, dynamicInterval - baseInterval);
-        
-        return () => clearTimeout(extendedId);
-      }
-    }, dynamicInterval);
-    
-    return () => clearInterval(id);
-  }, [aboutIndex, aboutImages.length, imageLoaded]);
-
-  // Helper to output per-letter traceable spans
-  const TraceLetters = ({ text, className }: { text: string; className?: string }) => (
-    <span className={className}>
-      {Array.from(text).map((ch, i) => (
-        <span key={i} data-trace-letter className="inline-block">{ch === ' ' ? '\u00A0' : ch}</span>
-      ))}
-    </span>
-  );
-
-  useEffect(() => {
-    const measure = () => {
-      if (aboutParaRef.current) {
-        setAboutTextHeight(aboutParaRef.current.getBoundingClientRect().height);
-      }
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
-
-  // Full FAQ data grouped by category
-  const faqCategories: { category: string; items: { q: string; a: ReactNode }[] }[] = [
-    {
-      category: 'General & Tickets',
-      items: [
-        {
-          q: 'When and where is Overtone Festival 2025?',
-          a: 'Overtone is a one‑day festival held on Sunday 12 October 2025 in Musgrave Park, Southport (Gold Coast). Gates open at 2pm and the music ends around 10pm. Please arrive early to allow time for entry.'
-        },
-        {
-          q: 'How do I get tickets?',
-          a: (<>
-            Sign up for Early Access tickets <a href="https://overtone.fillout.com/earlyaccess" target="_blank" rel="noopener noreferrer" className="underline">here</a>. Early Access guarantees you a 1st Release priced ticket when tickets go live on Tuesday 19 August at 12PM. You&apos;ll get a link shortly before that if you signed up. Email or DM us if you don&apos;t receive the link.
-          </>)
-        },
-        {
-          q: 'How much are tickets?',
-          a: '1st Release - $109.90 + $10 fee (EXCLUSIVE & GUARANTEED TO SIGN UPS)\n2nd Release - $129.90 + $10 fee\n3rd Release - $149.90 + $10 fee\n4th Release - $169.90 + $10 fee'
-        },
-        {
-          q: 'What is Early Access?',
-          a: (<>
-            Early Access guarantees you a 1st Release ticket. You will be able to buy one when they go on sale on Tuesday 19th August 12PM, until Wednesday 20 August at 12PM when General on sale begins. To sign up, click <a href="https://overtone.fillout.com/earlyaccess" target="_blank" rel="noopener noreferrer" className="underline">here</a>.
-          </>)
-        },
-        {
-          q: 'When are tickets on sale?',
-          a: (<>
-            Early Access live Tuesday 19 August 12pm<br />
-            General Access live Wednesday 20 August 12pm
-            <br />
-            <br />
-            Sign up <a href="https://overtone.fillout.com/earlyaccess" target="_blank" rel="noopener noreferrer">here</a> to be sent an exclusive link for 1st Release tickets. You&apos;ll be sent a link on Tuesday 19 August before tickets are live at 12PM.
-          </>)
-        },
-        { q: 'What is the age requirement?', a: 'The festival is strictly 18+. You must present a valid, government‑issued photo ID on entry—digital copies or photos of ID are not accepted.' },
-        { q: 'Are pass‑outs allowed (can I leave and return)?', a: 'No. Once you’ve entered, you cannot leave and re‑enter. Please plan accordingly.' },
-        { q: 'Is the event cashless?', a: 'Yes. Overtone is 100 % cashless—bring a credit/debit card or phone wallet. ATMs will not be available on site.' },
-        { q: 'Can I resell my ticket?', a: 'Tickets may only be resold via the official resale facility (details released closer to the event). Tickets purchased through unofficial sites may be voided.' }
-      ]
-    },
-    {
-      category: 'Getting There',
-      items: [
-        { q: 'How do I get to Musgrave Park?', a: '• Public transport: We strongly recommend using public transport. The G:link tram (Southport South station) and multiple bus routes stop within a short walk.\n• Ride‑share/drop‑off: Ride‑share and taxi zones will be signposted nearby.\n• Driving: Limited parking is available in surrounding streets and paid car parks; please check local parking restrictions. Accessible parking bays will be available for patrons with a permit.' },
-        { q: 'Is there parking at the venue?', a: 'Musgrave Park does not have dedicated event parking. Nearby public car parks and street parking are available on a first‑come, first‑served basis. We recommend car‑pooling or catching public transport.' },
-        { q: 'What should I do if I need accessible access?', a: 'The site is wheelchair‑friendly with accessible toilets. Please contact us ahead of time to arrange accessible parking or to discuss specific requirements.' }
-      ]
-    },
-    {
-      category: 'What to Bring & Banned Items',
-      items: [
-        { q: 'What can I bring into the festival?', a: '• A small bag (no larger than A4)\n• An empty plastic or metal water bottle to refill at free water stations\n• Sunscreen (110 mL or less)\n• A hat, poncho and earplugs\n• Medically‑necessary items (see below)' },
-        { q: 'What items are banned?', a: 'Please do not bring the following items; security will confiscate them and you may be refused entry:\n• Bags larger than A4 size, eskies or coolers\n• Alcohol, food or drink (except empty water bottles and medically required food)\n• Glass of any kind, cans, aerosols, metal water bottles or any liquid containers over 110 mL\n• Drugs or illegal substances\n• Weapons, fireworks, flares, sparklers or explosives\n• Umbrellas (use ponchos or raincoats instead)\n• Professional cameras, GoPros, recording devices, drones, or broadcasting equipment\n• Animals (except registered service animals)\n• Vapes or e‑cigs with more than 110 mL of liquid\n• Totem poles, flags or large banners' },
-        { q: 'Can I bring medication or food for a medical condition?', a: 'Yes, but medication must be in its original packaging with the dispensary label matching your ID. Only bring what you need and declare it at the accessible lane or medical entry point. For medical dietary requirements, please email us in advance with supporting documentation.' }
-      ]
-    },
-    {
-      category: 'On‑Site Experience',
-      items: [
-        { q: 'What facilities are available?', a: 'Musgrave Park will have plenty of shade, sunscreen stations, bathrooms and free water refill points. You’ll also find licensed bars, curated food vendors, market stalls, phone‑charging stations and a cloak room for bags.' },
-        { q: 'Will there be food and drinks?', a: 'Yes. We’ll host a range of food trucks and market stalls featuring local favourites and global flavours, along with fully‑licensed bars. Please bring ID if you plan to purchase alcohol.' },
-        { q: 'Can I smoke or vape?', a: 'Smoking and vaping are only permitted in designated areas. Vapes or e‑cig liquids over 110 mL are not allowed.' },
-        { q: 'Will there be first aid services?', a: 'Yes, professional first aid services will be on site with basic over‑the‑counter medication and a quiet space. Harm‑reduction services will also be available.' },
-        { q: 'What if it rains?', a: 'Overtone is a rain‑or‑shine event. Musgrave Park is mostly grass, so wear suitable footwear. Umbrellas are not allowed—bring a raincoat or poncho.' },
-        { q: 'Where do I go for lost property?', a: 'Lost property will be held at the Info Tent during the event. After the festival, any uncollected items may be handed over to local police; check our social media for updates.' }
-      ]
-    },
-    {
-      category: 'Accessibility & Safety',
-      items: [
-        { q: 'Is the festival wheelchair‑accessible?', a: 'Yes. Musgrave Park’s pathways are accessible and we provide accessible toilets. Please email us to arrange accessible parking or discuss additional needs.' },
-        { q: 'Are service animals allowed?', a: 'Registered service animals are welcome. Emotional‑support animals and pets are not allowed.' },
-        { q: 'What if I feel unsafe or unwell?', a: 'If you or someone else feels unsafe or unwell, please go to the nearest security guard, volunteer or first aid station. Our team is trained to assist with medical, safety and welfare issues. Harm‑reduction services will be on site.' }
-      ]
-    }
-  ];
-
-  // In case the video is cached and play events fire before React attaches listeners
-  useEffect(() => {
-    const v = videoRef.current;
-    if (v && v.readyState >= 3) setHeroVideoActive(true);
-  }, []);
-
-  // Replace IntersectionObserver with precise scroll position check: switch when hero fully scrolled past
-  useEffect(() => {
-    const heroEl = heroRef.current;
-    if (!heroEl) return;
-
-    const measure = () => {
-      setHeroHeight(heroEl.getBoundingClientRect().height);
-    };
-
-    const handleScroll = () => {
-      setPastHero(window.scrollY >= heroHeight - 1);
-    };
-
-    measure();
-    handleScroll();
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    setAppHeight();
+    window.addEventListener("resize", setAppHeight);
+    window.visualViewport?.addEventListener("resize", setAppHeight);
     return () => {
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener("resize", setAppHeight);
+      window.visualViewport?.removeEventListener("resize", setAppHeight);
     };
-  }, [heroHeight]);
+  }, []);
 
   return (
     <>
-  {/* Mouse tracing overlay */}
-  <canvas ref={traceCanvasRef} className="absolute inset-0 pointer-events-none z-30 mix-blend-multiply" aria-hidden="true" />
-      {/* Nav bar */}
-      <header className="fixed top-0 left-0 right-0 z-50">
-        <div className="relative px-4 py-[0.55rem]">{/* increased from py-1.5 (~6px) to ~8.8px for ~15% taller nav */}
-          {/* Glassy background layer */}
-          <div className="absolute inset-0 bg-white/5 dark:bg-white/5 backdrop-blur-xl backdrop-saturate-150 border-b border-white/15 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.5)] supports-[backdrop-filter]:bg-white/5 pointer-events-none" />
-          <nav className="relative flex items-center justify-between w-full">
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <div className="h-6 flex items-center relative">
-                  {/* Mobile: Use compact logo with color transitions */}
-                  <div className="sm:hidden relative">
-                    {/* Acid logo (pre-hero) */}
-                    <Image
-                      src="/logo.svg"
-                      alt="Overtone Festival"
-                      width={72}
-                      height={24}
-                      className={`h-6 w-auto relative -top-0.5 transition-opacity duration-300 ${pastHero ? 'opacity-0' : 'opacity-100'}`}
-                      priority
-                    />
-                    {/* Black logo (post-hero) */}
-                    <Image
-                      src="/logo.svg"
-                      alt="Overtone Festival"
-                      width={72}
-                      height={24}
-                      className={`h-6 w-auto absolute inset-0 -top-0.5 transition-opacity duration-300 ${pastHero ? 'opacity-100' : 'opacity-0'} filter brightness-0 saturate-100`}
-                      aria-hidden={!pastHero}
-                      priority
-                    />
-                  </div>
-                  {/* Desktop: Use wordmark with color transitions */}
-                  <div className="hidden sm:block relative">
-                    {/* Acid wordmark (pre-hero) */}
-                    <Image
-                      src="/logo-wordmark.svg"
-                      alt="Overtone Festival"
-                      width={160}
-                      height={24}
-                      className={`h-6 w-auto relative -top-0.5 transition-opacity duration-300 ${pastHero ? 'opacity-0' : 'opacity-100'}`}
-                      priority
-                    />
-                    {/* Black wordmark (post-hero) using filter to force black */}
-                    <Image
-                      src="/logo-wordmark.svg"
-                      alt="Overtone Festival (Black)"
-                      width={160}
-                      height={24}
-                      className={`h-6 w-auto absolute inset-0 -top-0.5 transition-opacity duration-300 ${pastHero ? 'opacity-100' : 'opacity-0'} filter brightness-0 saturate-100`}
-                      aria-hidden={!pastHero}
-                    />
-                  </div>
-                </div>
-              </Link>
-              <a data-trace href="#about" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}><TraceLetters text="About" /></a>
-              <a data-trace href="#lineup" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}><TraceLetters text="Lineup" /></a>
-              <a data-trace href="#faqs" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}><TraceLetters text="FAQs" /></a>
-              <a data-trace href="#contact" style={{ fontFamily: 'var(--font-header)' }} className={`${pastHero ? 'text-black' : '!text-[var(--acid)]'} no-stroke inline-flex items-center leading-none text-[0.92rem] sm:text-[1.15rem] font-medium hover:underline hidden sm:inline-flex transition-colors`}><TraceLetters text="Contact" /></a>
-            </div>
-            <div className="flex items-center space-x-4">
-              <a
-                href="https://moshtix.com.au/v2/event/overtone-festival-2025/184344?skin=OTF25"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`tickets-btn px-3 sm:px-5 py-2 text-[0.92rem] sm:text-[1.15rem] font-semibold rounded-lg hover:opacity-90 transition-colors no-stroke inline-flex items-center leading-none ${pastHero ? 'bg-black !text-[var(--acid)]' : 'bg-[var(--acid)] !text-[var(--bg)]'}`}
-              >
-                Tickets
-              </a>
-            </div>
-          </nav>
-        </div>
-      </header>
+      {/* Mouse tracing overlay */}
+      <canvas ref={traceCanvasRef} className="absolute inset-0 pointer-events-none z-30 mix-blend-multiply" aria-hidden="true" />
 
       {/* Hero Section */}
-      <section ref={heroRef} className="relative h-screen min-h-dvh flex items-center justify-center overflow-hidden">
-        <video
+      <section ref={heroRef} className="hero-section relative overflow-hidden">
+        <MuxPlayer
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="hero-video"
+          playbackId="YeOipCkirJz0232Wv02qjDovwfoqq7S00b4iFf00Degg214"
           autoPlay
           loop
           muted={muted}
           playsInline
+          controls={false}
           poster="/brand/hero-poster.jpg"
-          onLoadedData={() => setHeroVideoActive(true)}
-          onPlay={() => setHeroVideoActive(true)}
-        >
-          <source src="/brand/hero-mobile.mp4" media="(max-width: 640px)" />
-          <source src="/brand/hero.mp4" media="(min-width: 641px)" />
-        </video>
-        <div className={`relative z-10 text-center transition-opacity duration-500 ease-out ${heroVideoActive ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} aria-hidden={heroVideoActive}>
-          <Image
-            src="/logo.svg"
-            alt="Overtone Festival Logo"
-            width={300}
-            height={100}
-            priority
-          />
-        </div>
+          metadataVideoTitle="Overtone Festival Aftermovie"
+          metadataVideoId="overtone-2025-aftermovie"
+        />
+          <div className="safe-area relative z-10 flex min-h-[100svh] w-full px-6">
+            <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center text-[var(--acid)] no-stroke">
+              <Image
+                src="/logo-wordmark.svg"
+                alt="Overtone Festival"
+                width={1200}
+                height={180}
+                className="mx-auto h-auto w-full max-w-4xl"
+                priority
+              />
+
+              <div className="flex-1" />
+
+              <div className="flex w-full flex-col items-center gap-0">
+                <p
+                  className="max-w-[18rem] text-base font-medium leading-snug !text-[var(--acid)] sm:max-w-none sm:text-[1.4rem] lg:text-[1.6rem]"
+                  style={{ fontFamily: "var(--font-header)" }}
+                >
+                  Thank you for joining us at the first edition of Overtone Festival. We return in 2026.
+                </p>
+              <h1
+                className="text-[1.6rem] font-semibold leading-snug !text-[var(--acid)] sm:text-[2.2rem] lg:text-[2.7rem]"
+                style={{ fontFamily: "var(--font-header)" }}
+              >
+                <WaveText text="To stay up to date on news and information subscribe to our mailing list below" />
+              </h1>
+              </div>
+
+              <div className="flex-1" />
+
+              <div className="flex flex-col items-center gap-5 pb-6">
+                <a
+                  href="https://overtone.fillout.com/earlyaccess"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="holo-btn inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-semibold uppercase tracking-[0.25em] !text-white backdrop-blur transition"
+                  style={{ fontFamily: "var(--font-header)" }}
+                >
+                  Subscribe
+                </a>
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                  <a
+                    href="https://www.instagram.com/overtone.festival/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Instagram"
+                    className="holo-btn flex h-10 w-10 items-center justify-center rounded-full !text-white transition"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
+                      <path d="M12 7.3a4.7 4.7 0 1 0 0 9.4 4.7 4.7 0 0 0 0-9.4Zm0 7.7a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm6-7.95a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0ZM12 2.5c2.6 0 2.9 0 3.9.06 1 .05 1.6.22 2 .37.56.22.96.48 1.38.9.42.42.68.82.9 1.38.15.4.32 1 .37 2 .06 1 .06 1.3.06 3.9s0 2.9-.06 3.9c-.05 1-.22 1.6-.37 2-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.4.15-1 .32-2 .37-1 .06-1.3.06-3.9.06s-2.9 0-3.9-.06c-1-.05-1.6-.22-2-.37-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.15-.4-.32-1-.37-2C2.5 14.9 2.5 14.6 2.5 12s0-2.9.06-3.9c.05-1 .22-1.6.37-2 .22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.4-.15 1-.32 2-.37C9.1 2.5 9.4 2.5 12 2.5Zm0-1.5C9.3 1 9 1 8 1c-1.04.05-1.8.22-2.45.47a4.6 4.6 0 0 0-1.67 1.08A4.6 4.6 0 0 0 2.8 4.2c-.25.65-.42 1.41-.47 2.45C2 7.65 2 8 2 12s0 4.35.33 5.35c.05 1.04.22 1.8.47 2.45.23.58.54 1.08 1.08 1.67.59.54 1.09.85 1.67 1.08.65.25 1.41.42 2.45.47C9 23 9.3 23 12 23s3 0 4-.33c1.04-.05 1.8-.22 2.45-.47.58-.23 1.08-.54 1.67-1.08.54-.59.85-1.09 1.08-1.67.25-.65.42-1.41.47-2.45C22 16.35 22 16 22 12s0-3.35-.33-4.35c-.05-1.04-.22-1.8-.47-2.45a4.6 4.6 0 0 0-1.08-1.67A4.6 4.6 0 0 0 18.6 1.47c-.65-.25-1.41-.42-2.45-.47C15 1 14.7 1 12 1Z" />
+                    </svg>
+                  </a>
+                  <a
+                    href="https://www.facebook.com/profile.php?id=61579053744346"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Facebook"
+                    className="holo-btn flex h-10 w-10 items-center justify-center rounded-full !text-white transition"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
+                      <path d="M22 12.06C22 6.48 17.52 2 11.94 2S2 6.48 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.9h2.54V9.85c0-2.5 1.49-3.88 3.77-3.88 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.44 2.9h-2.34V22c4.78-.76 8.44-4.92 8.44-9.94Z" />
+                    </svg>
+                  </a>
+                  <a
+                    href="https://www.tiktok.com/@overtone.festival"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="TikTok"
+                    className="holo-btn flex h-10 w-10 items-center justify-center rounded-full !text-white transition"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
+                      <path d="M21 8.25c-1.47.02-2.9-.46-4.03-1.36v7.03c0 3.66-2.97 6.63-6.63 6.63a6.63 6.63 0 0 1-6.63-6.63c0-3.66 2.97-6.63 6.63-6.63.3 0 .6.02.9.06v3.34a3.3 3.3 0 0 0-.9-.13 3.36 3.36 0 1 0 3.36 3.36V2.5h3.18c.08.63.26 1.24.52 1.82.6 1.35 1.83 2.3 3.17 2.45v1.48Z" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
         {/* Audio toggle button */}
         <button
           onClick={() => {
-            const v = videoRef.current; if (!v) return; v.muted = !v.muted; setMuted(v.muted);
+            const v = videoRef.current;
+            if (!v) return;
+            const nextMuted = !v.muted;
+            v.muted = nextMuted;
+            // Ensure audible playback on user gesture
+            if (!nextMuted) {
+              v.volume = 1;
+              v.play().catch(() => {});
+            }
+            setMuted(nextMuted);
           }}
-          className="absolute bottom-16 sm:bottom-4 right-4 z-20 bg-black/60 text-[var(--acid)] border border-white/20 backdrop-blur-sm rounded-full px-4 py-2 text-sm font-medium hover:bg-black/70 transition"
+          className="audio-toggle absolute right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-[var(--acid)] border border-white/20 backdrop-blur-sm hover:bg-black/70 transition"
           aria-label={muted ? 'Unmute hero video' : 'Mute hero video'}
         >
-          {muted ? 'Audio Off' : 'Audio On'}
+          {muted ? (
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 stroke-current">
+              <path d="M3 10v4h4l5 4V6L7 10H3z" fill="none" strokeWidth="1.6" strokeLinejoin="round" />
+              <path d="M16 9a4 4 0 0 1 0 6" fill="none" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M19 5a9 9 0 0 1 0 14" fill="none" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M5 5l14 14" fill="none" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 stroke-current">
+              <path d="M3 10v4h4l5 4V6L7 10H3z" fill="none" strokeWidth="1.6" strokeLinejoin="round" />
+              <path d="M16 9a4 4 0 0 1 0 6" fill="none" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M19 5a9 9 0 0 1 0 14" fill="none" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          )}
         </button>
       </section>
-
-      {/* About Section */}
-      <section id="about" className="py-16 px-4">
-        <div className="w-full">
-          <h2 className="text-6xl font-bold text-black mb-10"><TraceLetters text="About" /></h2>
-          <div className="grid md:grid-cols-2 gap-10 md:gap-8 lg:gap-12 xl:gap-16">
-            <div ref={aboutParaRef} className="max-w-3xl md:max-w-none md:pr-2 lg:pr-4 xl:pr-6 space-y-8">
-            {[
-              'Overtone Festival is a new open-air music festival coming to Musgrave Park on the Gold Coast.',
-              'Set across two outdoor stages, it brings together some of the best international and Australian electronic artists for a full day of music, dancing, and good vibes.',
-              'Expect high-quality sound, creative stage design, and a vibrant atmosphere surrounded by the park\u2019s greenery.'
-            ].map((para, i) => (
-              <p key={i} className="text-[2.25rem] sm:text-[2.75rem] md:text-[3.0rem] leading-[1.08] text-black font-light tracking-tight">
-                {Array.from(para).map((ch, idx) => (
-                  <span key={idx} data-trace-letter className={ch === ' ' ? 'inline-block w-[0.4ch]' : ''}>{ch}</span>
-                ))}
-              </p>
-            ))}
-          </div>
-          <div className="relative w-full border border-black/20 bg-black/5 h-[60vh] md:h-auto md:min-h-full overflow-hidden" style={{ height: typeof window !== 'undefined' && window.innerWidth >= 768 ? (aboutTextHeight || undefined) : undefined }}>
-            {/* Loading indicator for current image */}
-            {!imageLoaded.has(aboutIndex) && (
-              <div className="absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center z-10">
-                <div className="text-black/60 text-sm">Loading...</div>
-              </div>
-            )}
-            
-            {/* Slideshow progress indicators */}
-            <div className="absolute bottom-4 left-4 flex space-x-1 z-20">
-              {aboutImages.map((_: string, index: number) => (
-                <div
-                  key={index}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    index === aboutIndex 
-                      ? 'bg-white shadow-lg' 
-                      : imageLoaded.has(index) 
-                        ? 'bg-white/60' 
-                        : 'bg-white/30'
-                  }`}
-                />
-              ))}
-            </div>
-            
-            {/* Render all images with opacity transitions instead of remounting */}
-            {aboutImages.map((src: string, index: number) => (
-              <Image
-                key={src}
-                src={src}
-                alt="Overtone Festival venue"
-                fill
-                sizes="(max-width:768px) 100vw, 50vw"
-                className={`object-cover transition-opacity duration-500 ease-in-out ${
-                  index === aboutIndex && imageLoaded.has(index) ? 'opacity-100' : 'opacity-0'
-                }`}
-                quality={75}
-                priority={index === 0 || index === 1} // Prioritize first two images
-                placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-                loading={index <= 2 ? "eager" : "lazy"} // Load first 3 images eagerly
-                onLoad={() => {
-                  setImageLoaded(prev => new Set([...prev, index]));
-                }}
-                onError={() => {
-                  // Handle image load errors gracefully
-                  console.warn(`Failed to load image: ${src}`);
-                  setImageLoaded(prev => new Set([...prev, index])); // Mark as "loaded" to prevent blocking
-                }}
-              />
-            ))}
-          </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Lineup Section */}
-      <section id="lineup" className="py-16 px-4">
-        <div className="w-full">
-          <h2 className="text-6xl font-bold text-black mb-10"><TraceLetters text="Lineup" /></h2>
-          <ul className="flex flex-col gap-3" style={{ fontFamily: 'var(--font-header)' }}>
-            {lineupAll.map(item => (
-              <li
-                key={item.name}
-                className={`group text-3xl md:text-6xl tracking-tight text-black ${item.name === '1TBSP' ? 'mt-10' : ''}`}
-              >
-                {/* Show clickable version if artist has audio preview */}
-                {(item.spotify || item.soundcloud) ? (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={openArtist === item.name}
-                    onClick={() => toggleArtist(item.name)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleArtist(item.name); } }}
-                    className="flex items-baseline justify-between gap-6 cursor-pointer select-none"
-                  >
-                    <span className="flex-1">
-                      {Array.from(item.name).map((ch, i) => (
-                        <span
-                          key={i}
-                          data-trace-letter
-                          className="inline-block transition-all duration-200 ease-out group-hover:[transition-duration:260ms] group-hover:font-[600] group-hover:scale-[1.04]"
-                        >
-                          {ch === ' ' ? '\u00A0' : ch}
-                        </span>
-                      ))}
-                    </span>
-                    <span className="text-3xl md:text-6xl tracking-tight min-w-[4rem] text-right font-light no-stroke" style={{ fontFamily: 'var(--font-header)', fontWeight: 300 }}>
-                      {Array.from(item.code).map((ch, i) => (
-                        <span key={i} data-trace-letter className="inline-block">
-                          {ch === ' ' ? '\u00A0' : ch}
-                        </span>
-                      ))}
-                    </span>
-                  </div>
-                ) : (
-                  /* Show non-clickable version if no audio preview */
-                  <div className="flex items-baseline justify-between gap-6">
-                    <span className="flex-1">
-                      {Array.from(item.name).map((ch, i) => (
-                        <span
-                          key={i}
-                          data-trace-letter
-                          className="inline-block"
-                        >
-                          {ch === ' ' ? '\u00A0' : ch}
-                        </span>
-                      ))}
-                    </span>
-                    <span className="text-3xl md:text-6xl tracking-tight min-w-[4rem] text-right font-light no-stroke" style={{ fontFamily: 'var(--font-header)', fontWeight: 300 }}>
-                      {Array.from(item.code).map((ch, i) => (
-                        <span key={i} data-trace-letter className="inline-block">
-                          {ch === ' ' ? '\u00A0' : ch}
-                        </span>
-                      ))}
-                    </span>
-                  </div>
-                )}
-                {openArtist === item.name && (
-                  <div className="mt-4 max-w-5xl animate-fade-in leading-none">
-                    {item.spotify && (
-                      <div className="overflow-hidden rounded-xl shadow-md border border-black/10 bg-black/5">
-                        <div className="relative w-full h-[152px]">
-                          <iframe
-                            data-testid="embed-iframe"
-                            src={`${item.spotify}?utm_source=generator&theme=0`}
-                            width="100%"
-                            height="152"
-                            frameBorder="0"
-                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                            loading="lazy"
-                            className="absolute inset-0 w-full h-full opacity-0 transition-opacity duration-500"
-                            style={{ backgroundColor: 'transparent' }}
-                            onLoad={(e) => {
-                              (e.target as HTMLIFrameElement).style.opacity = '1';
-                              setLoadedPlayers(prev => new Set(prev).add(`spotify-${item.name}`));
-                            }}
-                          />
-                          {/* Loading placeholder */}
-                          {!loadedPlayers.has(`spotify-${item.name}`) && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/5 text-black/60 text-sm font-medium pointer-events-none" style={{ wordSpacing: 'normal' }}>
-                              Loading player...
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {!item.spotify && item.soundcloud && (
-                      <div className="overflow-hidden rounded-xl shadow-md border border-black/10 bg-black/5">
-                        <div className="relative w-full h-[166px]">
-                          <iframe
-                            width="100%"
-                            height="166"
-                            scrolling="no"
-                            frameBorder="no"
-                            allow="autoplay"
-                            src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(item.soundcloud)}&color=%23000000&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`}
-                            className="absolute inset-0 w-full h-full opacity-0 transition-opacity duration-500"
-                            onLoad={(e) => {
-                              (e.target as HTMLIFrameElement).style.opacity = '1';
-                              setLoadedPlayers(prev => new Set(prev).add(`soundcloud-${item.name}`));
-                            }}
-                          />
-                          {/* Loading placeholder */}
-                          {!loadedPlayers.has(`soundcloud-${item.name}`) && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/5 text-black/60 text-sm font-medium pointer-events-none" style={{ wordSpacing: 'normal' }}>
-                              Loading player...
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {!item.spotify && !item.soundcloud && (
-                      <div className="text-sm md:text-base italic text-black/70">No preview available.</div>
-                    )}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* FAQs Section */}
-      <section id="faqs" className="py-16 px-4">
-        <div className="w-full">
-            <h2 className="text-6xl font-bold text-black mb-6"><TraceLetters text="FAQs" /></h2>
-          {faqCategories.map(cat => (
-            <div key={cat.category} className="mb-12">
-              <h3 className="text-3xl md:text-4xl font-bold text-black mb-4" style={{ fontFamily: 'var(--font-header)' }}>{cat.category}</h3>
-              <div className="space-y-4">
-                {cat.items.map(item => (
-                  <Faq key={item.q} question={item.q} answer={item.a} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section id="contact" className="py-16 px-4">
-        <div className="w-full text-center">
-          <h2 data-trace className="text-6xl font-bold mb-8"><TraceLetters text="Contact" /></h2>
-          <p className="text-lg text-black mb-4">
-            {Array.from('Have a question? Get in touch with our team.').map((ch, idx) => (
-              <span key={idx} data-trace-letter className={ch === ' ' ? 'inline-block w-[0.35ch]' : ''}>{ch}</span>
-            ))}
-          </p>
-          <a
-            href="mailto:hello@overtonefestival.com.au"
-            className="inline-block px-6 py-3 bg-[var(--acid)] text-[#00141f] rounded-full font-medium hover:opacity-90"
-          >
-            Email Us
-          </a>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-12 px-4 border-t border-black/20">
-        <div className="w-full text-center space-y-4">
-          <p className="text-xs text-black">
-            {Array.from('We acknowledge the Traditional Custodians of the land on which we gather, and pay our respects to Elders past and present.').map((ch, idx) => (
-              <span key={idx} data-trace-letter className={ch === ' ' ? 'inline-block w-[0.33ch]' : ''}>{ch}</span>
-            ))}
-          </p>
-          <div className="flex justify-center space-x-6">
-            <a href="https://www.instagram.com/overtone.festival/" target="_blank" rel="noopener noreferrer" className="text-black hover:underline">Instagram</a>
-            <a href="https://www.facebook.com/profile.php?id=61579053744346" target="_blank" rel="noopener noreferrer" className="text-black hover:underline">Facebook</a>
-            <a href="https://www.tiktok.com/@overtone.festival" target="_blank" rel="noopener noreferrer" className="text-black hover:underline">TikTok</a>
-          </div>
-          <p className="text-xs text-black">
-            {Array.from('© 2025 Overtone Festival. All rights reserved.').map((ch, idx) => (
-              <span key={idx} data-trace-letter className={ch === ' ' ? 'inline-block w-[0.33ch]' : ''}>{ch}</span>
-            ))}
-          </p>
-        </div>
-      </footer>
     </>
   );
 }
 
-type FaqProps = {
-  question: string;
-  answer: ReactNode;
-};
-
-function Faq({ question, answer }: FaqProps) {
-  const [open, setOpen] = useState(false);
+function WaveText({ text }: { text: string }) {
+  let index = 0;
+  const words = text.split(" ");
+  const wordsLength = words.length;
   return (
-    <div className="border border-black rounded-lg">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full text-left p-4 flex justify-between items-center text-black text-[1.2rem]"
-      >
-        <span>{question}</span>
-        <span className="text-black">{open ? "-" : "+"}</span>
-      </button>
-      {open && <p className="p-4 pt-0 text-black whitespace-pre-line [&_a]:underline [&_a]:decoration-2 [&_a]:underline-offset-2">{answer}</p>}
-    </div>
+    <span className="wave-text">
+      {words.map((word, wi) => {
+        const letters = Array.from(word).map((ch) => {
+          const key = `${ch}-${index}`;
+          const letter = (
+            <span key={key} style={{ ["--i" as any]: index }}>
+              {ch}
+            </span>
+          );
+          index += 1;
+          return letter;
+        });
+
+        return (
+          <span key={`word-${wi}`} className="wave-word">
+            {letters}
+            {wi < wordsLength - 1 ? "\u00A0" : null}
+          </span>
+        );
+      })}
+    </span>
   );
 }
