@@ -2,12 +2,21 @@
 
 import Image from "next/image";
 import MuxPlayer from "@mux/mux-player-react";
-import { useState, useRef, useEffect, type ElementRef } from "react";
+import { useState, useRef, useEffect, type ElementRef, type ChangeEvent, type FormEvent } from "react";
 
 export default function Page() {
   const videoRef = useRef<ElementRef<typeof MuxPlayer> | null>(null);
   const heroRef = useRef<HTMLElement | null>(null);
   const [muted, setMuted] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formStatus, setFormStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+  });
   // Mouse tracing canvas
   const traceCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -380,6 +389,44 @@ export default function Page() {
     };
   }, []);
 
+  useEffect(() => {
+    document.body.style.overflow = isModalOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isModalOpen]);
+
+  const handleFormChange = (field: keyof typeof formData) => (event: ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, [field]: event.target.value }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (formStatus === "loading") return;
+    setFormStatus("loading");
+    setFormError(null);
+
+    try {
+      const response = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || "Unable to submit. Please try again.");
+      }
+
+      setFormStatus("success");
+      setFormData({ firstName: "", lastName: "", phone: "", email: "" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to submit. Please try again.";
+      setFormStatus("error");
+      setFormError(message);
+    }
+  };
+
   return (
     <>
       {/* Mouse tracing overlay */}
@@ -430,15 +477,18 @@ export default function Page() {
               <div className="flex-1" />
 
               <div className="flex flex-col items-center gap-5 pb-6">
-                <a
-                  href="https://overtone.fillout.com/earlyaccess"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setFormStatus("idle");
+                    setFormError(null);
+                  }}
                   className="holo-btn inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-semibold uppercase tracking-[0.25em] !text-white backdrop-blur transition"
                   style={{ fontFamily: "var(--font-header)" }}
                 >
                   Subscribe
-                </a>
+                </button>
                 <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
                   <a
                     href="https://www.instagram.com/overtone.festival/"
@@ -510,6 +560,86 @@ export default function Page() {
           )}
         </button>
       </section>
+
+      {isModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
+          <div
+            className="modal-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Subscribe to mailing list"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="modal-close"
+              onClick={() => setIsModalOpen(false)}
+              aria-label="Close subscribe form"
+            >
+              X
+            </button>
+            <h2 style={{ fontFamily: "var(--font-header)" }}>Join the list</h2>
+            <p>Stay in the loop for 2026.</p>
+            <form onSubmit={handleSubmit} className="modal-form">
+              <label>
+                First name
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleFormChange("firstName")}
+                  autoComplete="given-name"
+                  required
+                />
+              </label>
+              <label>
+                Last name
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleFormChange("lastName")}
+                  autoComplete="family-name"
+                  required
+                />
+              </label>
+              <label>
+                Phone number (optional)
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleFormChange("phone")}
+                  autoComplete="tel"
+                />
+              </label>
+              <label>
+                Email address
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleFormChange("email")}
+                  autoComplete="email"
+                  required
+                />
+              </label>
+
+              {formError && <div className="modal-error">{formError}</div>}
+              {formStatus === "success" && <div className="modal-success">Thanks! You are on the list.</div>}
+
+              <button
+                type="submit"
+                className="holo-btn modal-submit"
+                style={{ fontFamily: "var(--font-header)" }}
+                disabled={formStatus === "loading"}
+              >
+                {formStatus === "loading" ? "Submitting..." : "Submit"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }
