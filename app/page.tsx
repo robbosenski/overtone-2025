@@ -14,6 +14,7 @@ export default function Page() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    phoneCountryCode: "+61",
     phone: "",
     email: "",
   });
@@ -396,7 +397,7 @@ export default function Page() {
     };
   }, [isModalOpen]);
 
-  const handleFormChange = (field: keyof typeof formData) => (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFormChange = (field: keyof typeof formData) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [field]: event.target.value }));
   };
 
@@ -419,7 +420,7 @@ export default function Page() {
       }
 
       setFormStatus("success");
-      setFormData({ firstName: "", lastName: "", phone: "", email: "" });
+      setFormData({ firstName: "", lastName: "", phoneCountryCode: "+61", phone: "", email: "" });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to submit. Please try again.";
       setFormStatus("error");
@@ -605,13 +606,28 @@ export default function Page() {
               </label>
               <label>
                 Phone number (optional)
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleFormChange("phone")}
-                  autoComplete="tel"
-                />
+                <div className="phone-row">
+                  <select
+                    name="phoneCountryCode"
+                    value={formData.phoneCountryCode}
+                    onChange={handleFormChange("phoneCountryCode")}
+                    aria-label="Country code"
+                  >
+                    <option value="+61">🇦🇺 AU +61</option>
+                    <option value="+64">🇳🇿 NZ +64</option>
+                    <option value="+1">🇺🇸 US +1</option>
+                    <option value="+44">🇬🇧 UK +44</option>
+                    <option value="+1">🇨🇦 CA +1</option>
+                  </select>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleFormChange("phone")}
+                    autoComplete="tel"
+                    placeholder="Phone number"
+                  />
+                </div>
               </label>
               <label>
                 Email address

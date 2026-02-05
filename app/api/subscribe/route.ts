@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 type SubscribePayload = {
   firstName?: string;
   lastName?: string;
+  phoneCountryCode?: string;
   phone?: string;
   email?: string;
 };
@@ -32,9 +33,19 @@ export async function POST(request: Request) {
     .filter((value) => !Number.isNaN(value));
 
   const attributes: Record<string, string> = {};
-  if (payload.firstName?.trim()) attributes.FIRSTNAME = payload.firstName.trim();
-  if (payload.lastName?.trim()) attributes.LASTNAME = payload.lastName.trim();
-  if (payload.phone?.trim()) attributes.SMS = payload.phone.trim();
+  if (payload.firstName?.trim()) attributes.FNAME = payload.firstName.trim();
+  if (payload.lastName?.trim()) attributes.LNAME = payload.lastName.trim();
+  if (payload.phone?.trim()) {
+    const rawPhone = payload.phone.trim();
+    const countryCode = payload.phoneCountryCode?.trim() || "";
+    let formattedPhone = rawPhone;
+    if (!rawPhone.startsWith("+")) {
+      const digits = rawPhone.replace(/\D/g, "").replace(/^0+/, "");
+      const codeDigits = countryCode.replace(/\D/g, "");
+      formattedPhone = codeDigits ? `+${codeDigits}${digits}` : rawPhone;
+    }
+    attributes.SMS = formattedPhone;
+  }
 
   const response = await fetch("https://api.brevo.com/v3/contacts", {
     method: "POST",
@@ -47,6 +58,8 @@ export async function POST(request: Request) {
       email,
       attributes,
       listIds: listIds.length ? listIds : undefined,
+      emailBlacklisted: false,
+      smsBlacklisted: false,
       updateEnabled: true,
     }),
   });

@@ -260,7 +260,8 @@ mux-player.hero-video [aria-live] {
   letter-spacing: 0.08em;
 }
 
-.modal-form input {
+.modal-form input,
+.modal-form select {
   border-radius: 12px;
   border: 1px solid rgba(232, 255, 105, 0.35);
   background: rgba(0, 0, 0, 0.45);
@@ -270,8 +271,22 @@ mux-player.hero-video [aria-live] {
   outline: none;
 }
 
-.modal-form input:focus {
+.modal-form input:focus,
+.modal-form select:focus {
   border-color: rgba(232, 255, 105, 0.8);
+}
+
+.phone-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.phone-row select {
+  min-width: 7.5rem;
+}
+
+.phone-row input {
+  flex: 1;
 }
 
 .modal-error {
