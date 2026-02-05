@@ -395,7 +395,6 @@ export default function Page() {
           loop
           muted={muted}
           playsInline
-          controls={false}
           poster="/brand/hero-poster.jpg"
           metadataVideoTitle="Overtone Festival Aftermovie"
           metadataVideoId="overtone-2025-aftermovie"
