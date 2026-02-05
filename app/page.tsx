@@ -1,11 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import MuxPlayer, { type MuxPlayerElement } from "@mux/mux-player-react";
-import { useState, useRef, useEffect, type CSSProperties } from "react";
+import MuxPlayer from "@mux/mux-player-react";
+import { useState, useRef, useEffect } from "react";
 
 export default function Page() {
-  const videoRef = useRef<MuxPlayerElement | null>(null);
+  const videoRef = useRef<HTMLElement | null>(null);
   const heroRef = useRef<HTMLElement | null>(null);
   const [muted, setMuted] = useState(true);
   // Mouse tracing canvas
@@ -481,7 +481,7 @@ export default function Page() {
         {/* Audio toggle button */}
         <button
           onClick={() => {
-            const v = videoRef.current;
+            const v = videoRef.current as unknown as HTMLMediaElement | null;
             if (!v) return;
             const nextMuted = !v.muted;
             v.muted = nextMuted;
