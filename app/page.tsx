@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import MuxPlayer, { type MuxPlayerElement } from "@mux/mux-player-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type CSSProperties } from "react";
 
 export default function Page() {
   const videoRef = useRef<MuxPlayerElement | null>(null);
@@ -524,8 +524,9 @@ function WaveText({ text }: { text: string }) {
       {words.map((word, wi) => {
         const letters = Array.from(word).map((ch) => {
           const key = `${ch}-${index}`;
+          const letterStyle: CSSProperties = { ["--i" as "--i"]: index };
           const letter = (
-            <span key={key} style={{ ["--i" as any]: index }}>
+            <span key={key} style={letterStyle}>
               {ch}
             </span>
           );
