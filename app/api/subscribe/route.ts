@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     .map((value) => Number(value.trim()))
     .filter((value) => !Number.isNaN(value));
 
-  const attributes: Record<string, string> = {};
+  const attributes: Record<string, string | boolean> = {};
   if (payload.firstName?.trim()) attributes.FNAME = payload.firstName.trim();
   if (payload.lastName?.trim()) attributes.LNAME = payload.lastName.trim();
   if (payload.privacyConsent) attributes.OPT_IN = true;
