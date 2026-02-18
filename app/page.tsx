@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import MuxPlayer from "@mux/mux-player-react";
+import Link from "next/link";
 import { useState, useRef, useEffect, type ElementRef, type ChangeEvent, type FormEvent } from "react";
 
 export default function Page() {
@@ -18,6 +19,8 @@ export default function Page() {
     phoneCountryCode: "+61",
     phone: "",
     email: "",
+    privacyConsent: false,
+    smsConsent: false,
   });
   // Mouse tracing canvas
   const traceCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -398,13 +401,24 @@ export default function Page() {
     };
   }, [isModalOpen]);
 
-  const handleFormChange = (field: keyof typeof formData) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData((prev) => ({ ...prev, [field]: event.target.value }));
-  };
+  const handleFormChange =
+    (field: keyof typeof formData) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const value =
+        event.target instanceof HTMLInputElement && event.target.type === "checkbox"
+          ? event.target.checked
+          : event.target.value;
+      setFormData((prev) => ({ ...prev, [field]: value }));
+      if (formError) setFormError(null);
+    };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (formStatus === "loading") return;
+    if (!formData.privacyConsent) {
+      setFormError("Please confirm you have read the Privacy Policy to continue.");
+      return;
+    }
     setFormStatus("loading");
     setFormError(null);
 
@@ -421,7 +435,15 @@ export default function Page() {
       }
 
       setFormStatus("success");
-      setFormData({ firstName: "", lastName: "", phoneCountryCode: "+61", phone: "", email: "" });
+      setFormData({
+        firstName: "",
+        lastName: "",
+        phoneCountryCode: "+61",
+        phone: "",
+        email: "",
+        privacyConsent: false,
+        smsConsent: false,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to submit. Please try again.";
       setFormStatus("error");
@@ -601,7 +623,7 @@ export default function Page() {
             <p>Stay in the loop for 2026.</p>
             <form onSubmit={handleSubmit} className="modal-form">
               <label>
-                First name
+                First name *
                 <input
                   type="text"
                   name="firstName"
@@ -612,7 +634,7 @@ export default function Page() {
                 />
               </label>
               <label>
-                Last name
+                Last name *
                 <input
                   type="text"
                   name="lastName"
@@ -648,7 +670,7 @@ export default function Page() {
                 </div>
               </label>
               <label>
-                Email address
+                Email address *
                 <input
                   type="email"
                   name="email"
@@ -657,6 +679,31 @@ export default function Page() {
                   autoComplete="email"
                   required
                 />
+              </label>
+
+              <label className="modal-consent">
+                <input
+                  type="checkbox"
+                  checked={formData.privacyConsent}
+                  onChange={handleFormChange("privacyConsent")}
+                  required
+                />
+                <span>
+                  * BY SIGNING UP TO HEAR MORE FROM OVERTONE FESTIVAL, I ACKNOWLEDGE I'VE READ THE{" "}
+                  <Link className="modal-link" href="/policies-and-conditions/">
+                    PRIVACY POLICY
+                  </Link>{" "}
+                  AND AM HAPPY TO BE CONTACTED BY BIZARRO ABOUT THEIR EVENTS VIA EMAIL.
+                </span>
+              </label>
+
+              <label className="modal-consent">
+                <input
+                  type="checkbox"
+                  checked={formData.smsConsent}
+                  onChange={handleFormChange("smsConsent")}
+                />
+                <span>I am happy to receive texts about Overtone Festival from Bizarro via SMS.</span>
               </label>
 
               {formError && <div className="modal-error">{formError}</div>}
@@ -668,7 +715,7 @@ export default function Page() {
                 style={{ fontFamily: "var(--font-header)" }}
                 disabled={formStatus === "loading"}
               >
-                {formStatus === "loading" ? "Submitting..." : "Submit"}
+                {formStatus === "success" ? "DONE" : formStatus === "loading" ? "Submitting..." : "Submit"}
               </button>
             </form>
           </div>

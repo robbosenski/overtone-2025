@@ -6,6 +6,8 @@ type SubscribePayload = {
   phoneCountryCode?: string;
   phone?: string;
   email?: string;
+  privacyConsent?: boolean;
+  smsConsent?: boolean;
 };
 
 export async function POST(request: Request) {
@@ -35,6 +37,8 @@ export async function POST(request: Request) {
   const attributes: Record<string, string> = {};
   if (payload.firstName?.trim()) attributes.FNAME = payload.firstName.trim();
   if (payload.lastName?.trim()) attributes.LNAME = payload.lastName.trim();
+  if (payload.privacyConsent) attributes.OPT_IN = true;
+  if (payload.smsConsent) attributes.SMS_CONSENT = true;
   if (payload.phone?.trim()) {
     const rawPhone = payload.phone.trim();
     const countryCode = payload.phoneCountryCode?.trim() || "";
