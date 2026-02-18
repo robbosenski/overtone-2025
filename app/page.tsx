@@ -689,7 +689,7 @@ export default function Page() {
                   required
                 />
                 <span>
-                  * BY SIGNING UP TO HEAR MORE FROM OVERTONE FESTIVAL, I ACKNOWLEDGE I'VE READ THE{" "}
+                  * BY SIGNING UP TO HEAR MORE FROM OVERTONE FESTIVAL, I ACKNOWLEDGE I&apos;VE READ THE{" "}
                   <Link className="modal-link" href="/policies-and-conditions/">
                     PRIVACY POLICY
                   </Link>{" "}
