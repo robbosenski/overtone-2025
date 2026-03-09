@@ -3,7 +3,7 @@
 import Image from "next/image";
 import MuxPlayer from "@mux/mux-player-react";
 import Link from "next/link";
-import { useState, useRef, useEffect, type ElementRef, type ChangeEvent, type FormEvent } from "react";
+import { useState, useRef, useEffect, type ElementRef, type ChangeEvent, type FormEvent, type CSSProperties } from "react";
 
 export default function Page() {
   const videoRef = useRef<ElementRef<typeof MuxPlayer> | null>(null);
@@ -473,91 +473,81 @@ export default function Page() {
           onCanPlay={() => setVideoReady(true)}
           onPlaying={() => setVideoReady(true)}
         />
-          <div className="safe-area relative z-10 flex min-h-[100svh] w-full px-6">
-            <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center text-[var(--acid)] no-stroke">
-              <Image
-                src="/logo-wordmark.svg"
-                alt="Overtone Festival"
-                width={1200}
-                height={180}
-                className="mx-auto h-auto w-full max-w-4xl"
-                priority
-              />
+        <div className="hero-overlay" aria-hidden="true" />
+        <div className="safe-area hero-shell relative z-10 flex min-h-[100svh] w-full px-6">
+          <div className="hero-content mx-auto flex w-full max-w-4xl flex-col items-center text-center text-[var(--acid)] no-stroke">
+            <Image
+              src="/logo-wordmark.svg"
+              alt="Overtone Festival"
+              width={1200}
+              height={180}
+              className="hero-logo mx-auto h-auto w-full max-w-4xl"
+              priority
+            />
 
-              <div className="flex-1" />
-
-              <div className="flex w-full flex-col items-center gap-0">
-                <p
-                  className="max-w-[18rem] text-base font-medium leading-snug !text-[var(--acid)] sm:max-w-none sm:text-[1.4rem] lg:text-[1.6rem]"
-                  style={{ fontFamily: "var(--font-header)" }}
-                >
-                  Thank you for joining us at the first edition of Overtone Festival. We return in 2026.
-                </p>
-              <h1
-                className="text-[1.6rem] font-semibold leading-snug !text-[var(--acid)] sm:text-[2.2rem] lg:text-[2.7rem]"
-                style={{ fontFamily: "var(--font-header)" }}
-              >
+            <div className={`hero-copy content-reveal ${videoReady ? "is-visible" : ""}`}>
+              <p className="hero-kicker" style={{ fontFamily: "var(--font-header)" }}>
+                Thank you for joining us at the first edition of Overtone Festival. We return in 2026.
+              </p>
+              <h1 className="hero-title" style={{ fontFamily: "var(--font-header)" }}>
                 To stay up to date on news and information subscribe to our mailing list below
               </h1>
-              </div>
+            </div>
 
-              <div className="flex-1" />
-
-              <div
-                className={`flex flex-col items-center gap-5 pb-6 transition-opacity duration-500 ${
-                  videoReady ? "opacity-100" : "opacity-0 pointer-events-none"
-                }`}
+            <div
+              className={`hero-cta content-reveal ${videoReady ? "is-visible" : ""}`}
+              style={{ "--reveal-delay": "140ms" } as CSSProperties}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(true);
+                  setFormStatus("idle");
+                  setFormError(null);
+                }}
+                className="holo-btn hero-subscribe-btn inline-flex items-center justify-center rounded-full !text-white"
+                style={{ fontFamily: "var(--font-header)" }}
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setFormStatus("idle");
-                    setFormError(null);
-                  }}
-                  className="holo-btn inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-semibold uppercase tracking-[0.25em] !text-white backdrop-blur transition"
-                  style={{ fontFamily: "var(--font-header)" }}
+                Subscribe
+              </button>
+              <div className="hero-socials">
+                <a
+                  href="https://www.instagram.com/overtone.festival/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  className="holo-btn social-btn flex items-center justify-center rounded-full !text-white"
                 >
-                  Subscribe
-                </button>
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-                  <a
-                    href="https://www.instagram.com/overtone.festival/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Instagram"
-                    className="holo-btn flex h-10 w-10 items-center justify-center rounded-full !text-white transition"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
-                      <path d="M12 7.3a4.7 4.7 0 1 0 0 9.4 4.7 4.7 0 0 0 0-9.4Zm0 7.7a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm6-7.95a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0ZM12 2.5c2.6 0 2.9 0 3.9.06 1 .05 1.6.22 2 .37.56.22.96.48 1.38.9.42.42.68.82.9 1.38.15.4.32 1 .37 2 .06 1 .06 1.3.06 3.9s0 2.9-.06 3.9c-.05 1-.22 1.6-.37 2-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.4.15-1 .32-2 .37-1 .06-1.3.06-3.9.06s-2.9 0-3.9-.06c-1-.05-1.6-.22-2-.37-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.15-.4-.32-1-.37-2C2.5 14.9 2.5 14.6 2.5 12s0-2.9.06-3.9c.05-1 .22-1.6.37-2 .22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.4-.15 1-.32 2-.37C9.1 2.5 9.4 2.5 12 2.5Zm0-1.5C9.3 1 9 1 8 1c-1.04.05-1.8.22-2.45.47a4.6 4.6 0 0 0-1.67 1.08A4.6 4.6 0 0 0 2.8 4.2c-.25.65-.42 1.41-.47 2.45C2 7.65 2 8 2 12s0 4.35.33 5.35c.05 1.04.22 1.8.47 2.45.23.58.54 1.08 1.08 1.67.59.54 1.09.85 1.67 1.08.65.25 1.41.42 2.45.47C9 23 9.3 23 12 23s3 0 4-.33c1.04-.05 1.8-.22 2.45-.47.58-.23 1.08-.54 1.67-1.08.54-.59.85-1.09 1.08-1.67.25-.65.42-1.41.47-2.45C22 16.35 22 16 22 12s0-3.35-.33-4.35c-.05-1.04-.22-1.8-.47-2.45a4.6 4.6 0 0 0-1.08-1.67A4.6 4.6 0 0 0 18.6 1.47c-.65-.25-1.41-.42-2.45-.47C15 1 14.7 1 12 1Z" />
-                    </svg>
-                  </a>
-                  <a
-                    href="https://www.facebook.com/profile.php?id=61579053744346"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Facebook"
-                    className="holo-btn flex h-10 w-10 items-center justify-center rounded-full !text-white transition"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
-                      <path d="M22 12.06C22 6.48 17.52 2 11.94 2S2 6.48 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.9h2.54V9.85c0-2.5 1.49-3.88 3.77-3.88 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.44 2.9h-2.34V22c4.78-.76 8.44-4.92 8.44-9.94Z" />
-                    </svg>
-                  </a>
-                  <a
-                    href="https://www.tiktok.com/@overtone.festival"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="TikTok"
-                    className="holo-btn flex h-10 w-10 items-center justify-center rounded-full !text-white transition"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
-                      <path d="M21 8.25c-1.47.02-2.9-.46-4.03-1.36v7.03c0 3.66-2.97 6.63-6.63 6.63a6.63 6.63 0 0 1-6.63-6.63c0-3.66 2.97-6.63 6.63-6.63.3 0 .6.02.9.06v3.34a3.3 3.3 0 0 0-.9-.13 3.36 3.36 0 1 0 3.36 3.36V2.5h3.18c.08.63.26 1.24.52 1.82.6 1.35 1.83 2.3 3.17 2.45v1.48Z" />
-                    </svg>
-                  </a>
-                </div>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="social-icon fill-current">
+                    <path d="M12 7.3a4.7 4.7 0 1 0 0 9.4 4.7 4.7 0 0 0 0-9.4Zm0 7.7a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm6-7.95a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0ZM12 2.5c2.6 0 2.9 0 3.9.06 1 .05 1.6.22 2 .37.56.22.96.48 1.38.9.42.42.68.82.9 1.38.15.4.32 1 .37 2 .06 1 .06 1.3.06 3.9s0 2.9-.06 3.9c-.05 1-.22 1.6-.37 2-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.4.15-1 .32-2 .37-1 .06-1.3.06-3.9.06s-2.9 0-3.9-.06c-1-.05-1.6-.22-2-.37-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.15-.4-.32-1-.37-2C2.5 14.9 2.5 14.6 2.5 12s0-2.9.06-3.9c.05-1 .22-1.6.37-2 .22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.4-.15 1-.32 2-.37C9.1 2.5 9.4 2.5 12 2.5Zm0-1.5C9.3 1 9 1 8 1c-1.04.05-1.8.22-2.45.47a4.6 4.6 0 0 0-1.67 1.08A4.6 4.6 0 0 0 2.8 4.2c-.25.65-.42 1.41-.47 2.45C2 7.65 2 8 2 12s0 4.35.33 5.35c.05 1.04.22 1.8.47 2.45.23.58.54 1.08 1.08 1.67.59.54 1.09.85 1.67 1.08.65.25 1.41.42 2.45.47C9 23 9.3 23 12 23s3 0 4-.33c1.04-.05 1.8-.22 2.45-.47.58-.23 1.08-.54 1.67-1.08.54-.59.85-1.09 1.08-1.67.25-.65.42-1.41.47-2.45C22 16.35 22 16 22 12s0-3.35-.33-4.35c-.05-1.04-.22-1.8-.47-2.45a4.6 4.6 0 0 0-1.08-1.67A4.6 4.6 0 0 0 18.6 1.47c-.65-.25-1.41-.42-2.45-.47C15 1 14.7 1 12 1Z" />
+                  </svg>
+                </a>
+                <a
+                  href="https://www.facebook.com/profile.php?id=61579053744346"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Facebook"
+                  className="holo-btn social-btn flex items-center justify-center rounded-full !text-white"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="social-icon fill-current">
+                    <path d="M22 12.06C22 6.48 17.52 2 11.94 2S2 6.48 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.9h2.54V9.85c0-2.5 1.49-3.88 3.77-3.88 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.44 2.9h-2.34V22c4.78-.76 8.44-4.92 8.44-9.94Z" />
+                  </svg>
+                </a>
+                <a
+                  href="https://www.tiktok.com/@overtone.festival"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="TikTok"
+                  className="holo-btn social-btn flex items-center justify-center rounded-full !text-white"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="social-icon fill-current">
+                    <path d="M21 8.25c-1.47.02-2.9-.46-4.03-1.36v7.03c0 3.66-2.97 6.63-6.63 6.63a6.63 6.63 0 0 1-6.63-6.63c0-3.66 2.97-6.63 6.63-6.63.3 0 .6.02.9.06v3.34a3.3 3.3 0 0 0-.9-.13 3.36 3.36 0 1 0 3.36 3.36V2.5h3.18c.08.63.26 1.24.52 1.82.6 1.35 1.83 2.3 3.17 2.45v1.48Z" />
+                  </svg>
+                </a>
               </div>
             </div>
           </div>
+        </div>
         {/* Audio toggle button */}
         <button
           onClick={() => {
